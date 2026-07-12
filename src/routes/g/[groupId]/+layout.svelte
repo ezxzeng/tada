@@ -24,7 +24,7 @@
 </script>
 
 <svelte:head>
-	<title>{sync.state.group.name} · todo-lst</title>
+	<title>{sync.state.group.name} · tada</title>
 </svelte:head>
 
 {#if sync.gone}
@@ -34,7 +34,7 @@
 {/if}
 
 <header>
-	<a class="home muted" href="/">todo-lst</a>
+	<a class="home muted" href="/">tada</a>
 	<div class="title-row">
 		<h1><a href="/g/{sync.groupId}">{sync.state.group.name}</a></h1>
 		<ShareButton path="/g/{sync.groupId}" />

@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>{page.status} · todo-lst</title>
+	<title>{page.status} · tada</title>
 </svelte:head>
 
 <div class="wrap">

@@ -53,12 +53,12 @@
 </script>
 
 <svelte:head>
-	<title>todo-lst · shared lists, no accounts</title>
+	<title>tada · shared lists, no accounts</title>
 	<meta name="description" content="Shared todo and grocery lists. No accounts — just share a link." />
 </svelte:head>
 
 <header class="hero">
-	<h1>todo-lst</h1>
+	<h1>tada</h1>
 	<p class="muted">
 		Shared lists without accounts. Create a group, send the link to your roommates, done.
 	</p>
@@ -77,7 +77,7 @@
 		</label>
 		<label>
 			<span>Your name</span>
-			<input type="text" bind:value={memberName} placeholder="Emily" maxlength="40" required />
+			<input type="text" bind:value={memberName} placeholder="A" maxlength="40" required />
 		</label>
 		<button class="btn" disabled={busy || !groupName.trim() || !memberName.trim()}>
 			{busy ? 'Creating…' : 'Create group'}

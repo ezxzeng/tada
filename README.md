@@ -1,4 +1,4 @@
-# todo-lst
+# tada
 
 Shared todo/grocery lists without accounts, in the spirit of [spliit](https://github.com/spliit-app/spliit):
 create a **group**, share its link, and anyone with the link can add, check off, and edit items.
