@@ -4,13 +4,11 @@
 		forgetGroup,
 		getRecentGroups,
 		rememberGroup,
-		storeMemberId,
 		type RecentGroup
-	} from '$lib/client/identity';
+	} from '$lib/client/recents';
 	import type { GroupState } from '$lib/types';
 
 	let groupName = $state('');
-	let memberName = $state('');
 	let listName = $state('Groceries');
 	let busy = $state(false);
 	let failed = $state(false);
@@ -31,13 +29,11 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					groupName: groupName.trim(),
-					memberName: memberName.trim(),
 					listName: listName.trim() || 'Groceries'
 				})
 			});
 			if (!res.ok) throw new Error(`create failed: ${res.status}`);
-			const data = (await res.json()) as GroupState & { memberId: string };
-			storeMemberId(data.group.id, data.memberId);
+			const data = (await res.json()) as GroupState;
 			rememberGroup(data.group.id, data.group.name);
 			await goto(`/g/${data.group.id}`);
 		} catch {
@@ -75,11 +71,7 @@
 			<span>First list</span>
 			<input type="text" bind:value={listName} placeholder="Groceries" maxlength="80" />
 		</label>
-		<label>
-			<span>Your name</span>
-			<input type="text" bind:value={memberName} placeholder="A" maxlength="40" required />
-		</label>
-		<button class="btn" disabled={busy || !groupName.trim() || !memberName.trim()}>
+		<button class="btn" disabled={busy || !groupName.trim()}>
 			{busy ? 'Creating…' : 'Create group'}
 		</button>
 		{#if failed}

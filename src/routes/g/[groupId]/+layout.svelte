@@ -1,15 +1,14 @@
 <script lang="ts">
-	import { GroupContext, setGroupContext } from '$lib/client/context.svelte';
-	import { rememberGroup } from '$lib/client/identity';
-	import MemberPicker from '$lib/components/MemberPicker.svelte';
+	import { setGroupSync } from '$lib/client/context.svelte';
+	import { GroupSync } from '$lib/client/sync.svelte';
+	import { rememberGroup } from '$lib/client/recents';
 	import ShareButton from '$lib/components/ShareButton.svelte';
 
 	let { data, children } = $props();
 
 	// Deliberately captures only the initial load: later data flows in via replaceFromLoad below.
 	// svelte-ignore state_referenced_locally
-	const ctx = setGroupContext(new GroupContext(data.state));
-	const sync = ctx.sync;
+	const sync = setGroupSync(new GroupSync(data.state));
 
 	// Poll while mounted; the returned cleanup stops it.
 	$effect(() => sync.start());
@@ -17,9 +16,6 @@
 	$effect(() => sync.replaceFromLoad(data.state));
 	$effect(() => {
 		rememberGroup(sync.state.group.id, sync.state.group.name);
-	});
-	$effect(() => {
-		ctx.loadIdentity();
 	});
 </script>
 
@@ -42,15 +38,6 @@
 </header>
 
 {@render children()}
-
-{#if ctx.showPicker && !sync.gone}
-	<MemberPicker
-		groupName={sync.state.group.name}
-		members={sync.state.members}
-		onPick={(member) => ctx.identify(member.id)}
-		onJoin={(name) => ctx.joinAs(name)}
-	/>
-{/if}
 
 <style>
 	.banner {

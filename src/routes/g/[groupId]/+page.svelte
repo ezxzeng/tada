@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { getGroupContext } from '$lib/client/context.svelte';
-	import MemberChip from '$lib/components/MemberChip.svelte';
+	import { getGroupSync } from '$lib/client/context.svelte';
 	import type { TodoList } from '$lib/types';
 
-	const ctx = getGroupContext();
-	const sync = ctx.sync;
+	const sync = getGroupSync();
 
 	let newListName = $state('');
 	let addingList = $state(false);
@@ -23,15 +21,6 @@
 		newListName = '';
 	}
 </script>
-
-<section class="members">
-	{#each sync.state.members as member (member.id)}
-		<span class="member" class:me={member.id === ctx.memberId}>
-			<MemberChip name={member.name} small />
-			{member.name}{member.id === ctx.memberId ? ' (you)' : ''}
-		</span>
-	{/each}
-</section>
 
 <ul class="lists">
 	{#each sync.state.lists as list (list.id)}
@@ -71,26 +60,6 @@
 <p class="hint muted">Share the link above — anyone who has it can view and edit this group.</p>
 
 <style>
-	.members {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem 0.9rem;
-		margin-bottom: 1.25rem;
-	}
-
-	.member {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.9rem;
-		color: var(--muted);
-	}
-
-	.member.me {
-		color: var(--text);
-		font-weight: 600;
-	}
-
 	.lists {
 		display: flex;
 		flex-direction: column;

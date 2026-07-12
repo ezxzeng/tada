@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { db } from './db';
-import { groups, items, lists, members } from './db/schema';
+import { groups, items, lists } from './db/schema';
 import type { GroupState } from '$lib/types';
 
 export async function getGroupVersion(groupId: string): Promise<number> {
@@ -17,7 +17,6 @@ export async function getGroupState(groupId: string): Promise<GroupState> {
 	const group = await db.query.groups.findFirst({
 		where: eq(groups.id, groupId),
 		with: {
-			members: { orderBy: (m, { asc }) => [asc(m.createdAt), asc(m.id)] },
 			lists: {
 				orderBy: (l, { asc }) => [asc(l.position), asc(l.createdAt), asc(l.id)],
 				with: {
@@ -30,7 +29,6 @@ export async function getGroupState(groupId: string): Promise<GroupState> {
 	return {
 		version: group.version,
 		group: { id: group.id, name: group.name },
-		members: group.members,
 		lists: group.lists
 	};
 }
@@ -67,12 +65,4 @@ export async function assertItemInList(
 		.innerJoin(lists, eq(items.listId, lists.id))
 		.where(and(eq(items.id, itemId), eq(items.listId, listId), eq(lists.groupId, groupId)));
 	if (!row) throw error(404, 'Item not found');
-}
-
-export async function assertMemberInGroup(groupId: string, memberId: string): Promise<void> {
-	const [row] = await db
-		.select({ id: members.id })
-		.from(members)
-		.where(and(eq(members.id, memberId), eq(members.groupId, groupId)));
-	if (!row) throw error(400, 'Unknown member');
 }

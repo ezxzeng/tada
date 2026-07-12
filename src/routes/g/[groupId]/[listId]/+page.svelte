@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { getGroupContext } from '$lib/client/context.svelte';
+	import { getGroupSync } from '$lib/client/context.svelte';
 	import AddItemForm from '$lib/components/AddItemForm.svelte';
 	import ItemRow from '$lib/components/ItemRow.svelte';
 
-	const ctx = getGroupContext();
-	const sync = ctx.sync;
+	const sync = getGroupSync();
 
 	const list = $derived(sync.state.lists.find((l) => l.id === page.params.listId));
 	const todo = $derived(list?.items.filter((i) => !i.checked) ?? []);
@@ -61,15 +60,13 @@
 		{/if}
 	</div>
 
-	<AddItemForm onAdd={(title, note) => sync.addItem(activeList.id, title, note, ctx.memberId)} />
+	<AddItemForm onAdd={(title, note) => sync.addItem(activeList.id, title, note)} />
 
 	<ul class="items">
 		{#each todo as item (item.id)}
 			<ItemRow
 				{item}
-				addedBy={sync.memberById(item.addedByMemberId)}
-				checkedBy={sync.memberById(item.checkedByMemberId)}
-				onToggle={(i) => sync.toggleItem(i, ctx.memberId)}
+				onToggle={(i) => sync.toggleItem(i)}
 				onDelete={(i) => sync.deleteItem(i)}
 				onSave={(i, title, note) => sync.editItem(i, title, note)}
 			/>
@@ -94,9 +91,7 @@
 				{#each done as item (item.id)}
 					<ItemRow
 						{item}
-						addedBy={sync.memberById(item.addedByMemberId)}
-						checkedBy={sync.memberById(item.checkedByMemberId)}
-						onToggle={(i) => sync.toggleItem(i, ctx.memberId)}
+						onToggle={(i) => sync.toggleItem(i)}
 						onDelete={(i) => sync.deleteItem(i)}
 						onSave={(i, title, note) => sync.editItem(i, title, note)}
 					/>
