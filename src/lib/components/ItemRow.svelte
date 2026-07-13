@@ -6,33 +6,40 @@
 		onToggle,
 		onDelete,
 		onSave,
-		onPress,
-		dragging = false,
-		offsetY = 0
+		onPress
 	}: {
 		item: Item;
 		onToggle: (item: Item) => void;
 		onDelete: (item: Item) => void;
 		onSave: (item: Item, title: string, note: string) => void;
-		/** Long-press-to-drag: omit to make the row non-sortable. */
+		/** Drag-to-reorder: omit to render the row without a handle. */
 		onPress?: (event: PointerEvent, item: Item) => void;
-		dragging?: boolean;
-		offsetY?: number;
 	} = $props();
 
 	let editing = $state(false);
 	let title = $state('');
 	let note = $state('');
+	let titleInput = $state<HTMLInputElement | null>(null);
+
+	function setEditing(on: boolean) {
+		editing = on;
+	}
+
+	// `autofocus` is unreliable for an element mounted mid-interaction, so the
+	// editor claims focus itself.
+	$effect(() => {
+		if (editing) titleInput?.focus();
+	});
 
 	function startEdit() {
 		title = item.title;
 		note = item.note ?? '';
-		editing = true;
+		setEditing(true);
 	}
 
 	function commit() {
 		if (!editing) return;
-		editing = false;
+		setEditing(false);
 		const trimmedTitle = title.trim();
 		const trimmedNote = note.trim();
 		if (!trimmedTitle) return;
@@ -45,7 +52,7 @@
 			event.preventDefault();
 			commit();
 		} else if (event.key === 'Escape') {
-			editing = false;
+			setEditing(false);
 		}
 	}
 
@@ -60,15 +67,7 @@
 	}
 </script>
 
-<li
-	class="card"
-	class:checked={item.checked}
-	class:dragging
-	class:sortable={onPress && !editing}
-	data-item-id={item.id}
-	style="transform: translateY({offsetY}px)"
-	onpointerdown={editing ? undefined : (event) => onPress?.(event, item)}
->
+<div class="card row" class:checked={item.checked}>
 	<input
 		type="checkbox"
 		checked={item.checked}
@@ -79,8 +78,13 @@
 	{#if editing}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="edit" onkeydown={onKeydown} onfocusout={onFocusout}>
-			<!-- svelte-ignore a11y_autofocus -->
-			<input type="text" bind:value={title} maxlength="200" aria-label="Item" autofocus />
+			<input
+				type="text"
+				bind:this={titleInput}
+				bind:value={title}
+				maxlength="200"
+				aria-label="Item"
+			/>
 			<input
 				type="text"
 				class="note-input"
@@ -100,32 +104,53 @@
 	<button class="icon danger" onclick={() => onDelete(item)} aria-label="Delete {item.title}">
 		✕
 	</button>
-</li>
+
+	{#if onPress}
+		<span
+			class="handle"
+			role="button"
+			tabindex="-1"
+			aria-label="Reorder {item.title}"
+			onpointerdown={(event) => onPress?.(event, item)}
+		>
+			⠿
+		</span>
+	{:else}
+		<!-- Keeps the delete button in line with the reorderable rows above. -->
+		<span class="handle" aria-hidden="true"></span>
+	{/if}
+</div>
 
 <style>
-	li {
+	.row {
 		display: flex;
 		align-items: center;
 		gap: 0.7rem;
 		padding: 0.3rem 0.6rem 0.3rem 0.8rem;
 		min-height: 3rem;
-		transition: transform 0.15s ease;
 	}
 
-	/* Long-press starts a drag, so suppress the OS text-selection gesture. */
-	.sortable {
+	/* The only draggable part of the row. `touch-action: none` keeps the browser from
+	   claiming the gesture as a page scroll, so the drag starts on the first move. */
+	.handle {
+		flex-shrink: 0;
+		/* A finger-sized target: the grip glyph itself is only a few px wide. */
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 2.75rem;
+		min-height: 2.75rem;
+		color: var(--muted);
+		font-size: 1.1rem;
+		line-height: 1;
+		touch-action: none;
 		-webkit-user-select: none;
 		user-select: none;
 		-webkit-touch-callout: none;
 	}
 
-	.dragging {
-		transition: none;
-		position: relative;
-		z-index: 2;
-		cursor: grabbing;
-		box-shadow: 0 8px 20px rgb(0 0 0 / 0.18);
-		scale: 1.02;
+	.handle:hover {
+		color: var(--text);
 	}
 
 	input[type='checkbox'] {
