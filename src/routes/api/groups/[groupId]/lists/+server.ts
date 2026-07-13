@@ -16,7 +16,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	const body = await readJson(request, createListSchema);
 	await getGroupVersion(groupId); // 404 if the group doesn't exist
 
-	await db.insert(lists).values({ id: nanoid(12), groupId, name: body.name });
+	const id = nanoid(12);
+	await db.insert(lists).values({ id, groupId, name: body.name });
 
-	return json(await bumpAndGetState(groupId), { status: 201 });
+	return json({ ...(await bumpAndGetState(groupId)), createdListId: id }, { status: 201 });
 };

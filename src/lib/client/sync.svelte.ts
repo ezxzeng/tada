@@ -137,9 +137,10 @@ export class GroupSync {
 	// ---- Lists ----
 
 	async addList(name: string): Promise<string | null> {
-		const before = new Set(this.state.lists.map((l) => l.id));
-		const data = await this.#mutate('POST', this.#api('/lists'), { name });
-		return data?.lists.find((l) => !before.has(l.id))?.id ?? null;
+		const data = (await this.#mutate('POST', this.#api('/lists'), { name })) as
+			| (GroupState & { createdListId: string })
+			| null;
+		return data?.createdListId ?? null;
 	}
 
 	async renameList(listId: string, name: string): Promise<void> {
