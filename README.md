@@ -16,7 +16,8 @@ The unguessable URL is the only credential.
 
    ```sh
    cp .env.example .env
-   # then edit .env and set DATABASE_URL=postgresql://...
+   # DATABASE_URL      — the database you develop against
+   # DATABASE_URL_PROD — the production database (local only; never set in Vercel)
    ```
 
 3. Create the tables and run the dev server:
@@ -29,10 +30,22 @@ The unguessable URL is the only credential.
 
 ## Deploying to Vercel
 
-1. Push this repo to GitHub (or GitLab/Bitbucket).
-2. [Import it in Vercel](https://vercel.com/new) — the SvelteKit setup is detected automatically.
-3. Set the `DATABASE_URL` environment variable in the Vercel project settings.
-4. If you haven't already, run `npm run db:push` once (locally, with the same `DATABASE_URL`) to create the tables.
+The app reads `DATABASE_URL` at runtime. With the [Neon–Vercel integration](https://neon.com/docs/guides/neon-managed-vercel-integration)
+that variable is injected into the Vercel project automatically (and preview deployments get their own
+Neon branch), so there is nothing to configure by hand.
+
+The integration does **not** apply schema changes — nothing in the Vercel build runs `drizzle-kit`.
+Whenever you change `src/lib/server/db/schema.ts`, push the schema to production yourself, before
+deploying the code that depends on it:
+
+```sh
+npm run db:push:prod   # uses DATABASE_URL_PROD from your local .env
+git push               # Vercel builds and deploys
+```
+
+Pushing the schema first keeps the two in sync: additive changes (new tables/columns) are safe against
+the running old code, whereas destructive ones (dropping or renaming a column) will break it, so ship
+those as an additive push, then the code, then a cleanup push.
 
 ## How it works
 

@@ -9,6 +9,7 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"db:push": "drizzle-kit push",
+		"db:push:prod": "DB_TARGET=prod drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
