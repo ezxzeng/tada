@@ -2,10 +2,15 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { getGroupSync } from '$lib/client/context.svelte';
+	import { DragSort } from '$lib/client/dragsort.svelte';
 	import AddItemForm from '$lib/components/AddItemForm.svelte';
 	import ItemRow from '$lib/components/ItemRow.svelte';
 
 	const sync = getGroupSync();
+
+	const sort = new DragSort((ids) => {
+		if (list) void sync.reorderItems(list.id, ids);
+	});
 
 	const list = $derived(sync.state.lists.find((l) => l.id === page.params.listId));
 	const todo = $derived(list?.items.filter((i) => !i.checked) ?? []);
@@ -69,6 +74,9 @@
 				onToggle={(i) => sync.toggleItem(i)}
 				onDelete={(i) => sync.deleteItem(i)}
 				onSave={(i, title, note) => sync.editItem(i, title, note)}
+				onPress={todo.length > 1 ? (event, i) => sort.press(event, i.id) : undefined}
+				dragging={sort.activeId === item.id}
+				offsetY={sort.offsetOf(item.id)}
 			/>
 		{/each}
 	</ul>

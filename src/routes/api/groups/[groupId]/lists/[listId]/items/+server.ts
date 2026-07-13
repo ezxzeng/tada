@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
@@ -13,19 +13,57 @@ const addItemSchema = z.object({
 	note: z.string().trim().max(300).optional()
 });
 
+const reorderSchema = z.object({
+	ids: z.array(z.string()).min(1).max(500)
+});
+
 export const POST: RequestHandler = async ({ params, request }) => {
 	const { groupId, listId } = params;
 	const body = await readJson(request, addItemSchema);
 	await assertListInGroup(groupId, listId);
 
+	const [row] = await db
+		.select({ max: sql<number | null>`max(${items.position})` })
+		.from(items)
+		.where(eq(items.listId, listId));
+
 	await db.insert(items).values({
 		id: nanoid(12),
 		listId,
 		title: body.title,
-		note: body.note || null
+		note: body.note || null,
+		position: Number(row?.max ?? -1) + 1
 	});
 
 	return json(await bumpAndGetState(groupId), { status: 201 });
+};
+
+// Reorder: `ids` is every item in the list, in its new order. Ids that no
+// longer exist (deleted by someone else mid-drag) are ignored.
+export const PATCH: RequestHandler = async ({ params, request }) => {
+	const { groupId, listId } = params;
+	const body = await readJson(request, reorderSchema);
+	await assertListInGroup(groupId, listId);
+
+	const rows = await db.select({ id: items.id }).from(items).where(eq(items.listId, listId));
+	const known = new Set(rows.map((r) => r.id));
+	const ordered = body.ids.filter((id) => known.has(id));
+	if (ordered.length === 0) return json(await bumpAndGetState(groupId));
+
+	// The neon-http driver has no interactive transactions, so write all the
+	// new positions with a single CASE update.
+	const cases = sql.join(
+		ordered.map((id, i) => sql`when ${items.id} = ${id} then ${i}`),
+		sql` `
+	);
+	await db
+		.update(items)
+		// The cast is required: bound parameters arrive untyped, so postgres can't
+		// infer the CASE result type on its own.
+		.set({ position: sql`(case ${cases} end)::int` })
+		.where(and(eq(items.listId, listId), inArray(items.id, ordered)));
+
+	return json(await bumpAndGetState(groupId));
 };
 
 // Clear completed: deletes every checked item in the list.

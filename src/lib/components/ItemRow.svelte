@@ -5,12 +5,19 @@
 		item,
 		onToggle,
 		onDelete,
-		onSave
+		onSave,
+		onPress,
+		dragging = false,
+		offsetY = 0
 	}: {
 		item: Item;
 		onToggle: (item: Item) => void;
 		onDelete: (item: Item) => void;
 		onSave: (item: Item, title: string, note: string) => void;
+		/** Long-press-to-drag: omit to make the row non-sortable. */
+		onPress?: (event: PointerEvent, item: Item) => void;
+		dragging?: boolean;
+		offsetY?: number;
 	} = $props();
 
 	let editing = $state(false);
@@ -53,7 +60,15 @@
 	}
 </script>
 
-<li class="card" class:checked={item.checked}>
+<li
+	class="card"
+	class:checked={item.checked}
+	class:dragging
+	class:sortable={onPress && !editing}
+	data-item-id={item.id}
+	style="transform: translateY({offsetY}px)"
+	onpointerdown={editing ? undefined : (event) => onPress?.(event, item)}
+>
 	<input
 		type="checkbox"
 		checked={item.checked}
@@ -94,6 +109,23 @@
 		gap: 0.7rem;
 		padding: 0.3rem 0.6rem 0.3rem 0.8rem;
 		min-height: 3rem;
+		transition: transform 0.15s ease;
+	}
+
+	/* Long-press starts a drag, so suppress the OS text-selection gesture. */
+	.sortable {
+		-webkit-user-select: none;
+		user-select: none;
+		-webkit-touch-callout: none;
+	}
+
+	.dragging {
+		transition: none;
+		position: relative;
+		z-index: 2;
+		cursor: grabbing;
+		box-shadow: 0 8px 20px rgb(0 0 0 / 0.18);
+		scale: 1.02;
 	}
 
 	input[type='checkbox'] {
