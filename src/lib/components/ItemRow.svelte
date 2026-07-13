@@ -92,12 +92,16 @@
 
 	{#if editing}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- Without `enterkeyhint`, a mobile keyboard turns Return into "Next" whenever another
+		     text field follows, and "Next" moves focus instead of firing Enter — onKeydown never
+		     sees it, so the edit can't be committed from the title field. -->
 		<div class="edit" onkeydown={onKeydown} onfocusout={onFocusout}>
 			<input
 				type="text"
 				bind:this={titleInput}
 				bind:value={title}
 				maxlength="200"
+				enterkeyhint="done"
 				aria-label="Item"
 			/>
 			<div class="edit-aside">
@@ -107,6 +111,7 @@
 					bind:value={note}
 					maxlength="300"
 					placeholder="Qty / note"
+					enterkeyhint="done"
 					aria-label="Quantity or note"
 				/>
 				<button

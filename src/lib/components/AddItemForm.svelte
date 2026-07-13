@@ -19,6 +19,9 @@
 	}
 </script>
 
+<!-- Without `enterkeyhint`, a mobile keyboard turns Return into "Next" whenever another
+     text field follows, and "Next" moves focus instead of firing Enter — the form never
+     submits. "done" forces a key that submits from either field. -->
 <form onsubmit={submit}>
 	<input
 		type="text"
@@ -26,6 +29,7 @@
 		bind:value={title}
 		placeholder="Add an item…"
 		maxlength="200"
+		enterkeyhint="done"
 		aria-label="Item"
 	/>
 	<input
@@ -34,6 +38,7 @@
 		bind:value={note}
 		placeholder="Qty / note"
 		maxlength="300"
+		enterkeyhint="done"
 		aria-label="Quantity or note"
 	/>
 	<button class="btn" class:empty={!title.trim()} aria-label="Add item">Add</button>
