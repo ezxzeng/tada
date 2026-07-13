@@ -69,7 +69,7 @@
 		<AddItemForm onAdd={(title, note) => sync.addItem(activeList.id, title, note)} />
 	</div>
 
-	<ul class="items">
+	<ul class="items" class:settling={sort.settling}>
 		{#each todo as item (item.id)}
 			<li
 				data-item-id={item.id}
@@ -183,6 +183,12 @@
 
 	.items li {
 		transition: transform 0.15s ease;
+	}
+
+	/* The frame the reordered list lands in: the rows are already where the drag left them,
+	   so any transition here is movement away from the right answer and back. */
+	.items.settling li {
+		transition: none;
 	}
 
 	/* The row under the finger: it tracks the pointer directly, so it must not lag

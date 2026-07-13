@@ -13,6 +13,13 @@ export class DragSort {
 	activeId = $state<string | null>(null);
 	/** translateY, in px, for each row while a drag is in progress. */
 	offsets = $state<Record<string, number>>({});
+	/**
+	 * True for the frame the reordered list lands in. Committing moves the rows to their
+	 * new slots and drops their offsets at once, which is a no-op on screen — but only if
+	 * rows don't animate it, since they would animate the dropped offset against the slot
+	 * they just moved into and travel a whole row to get back.
+	 */
+	settling = $state(false);
 
 	#commit: (ids: string[]) => void;
 	#rows: Row[] = [];
@@ -195,6 +202,10 @@ export class DragSort {
 			const [moved] = ids.splice(this.#from, 1);
 			ids.splice(this.#to, 0, moved);
 			this.#commit(ids);
+			this.settling = true;
+			// Two frames: the first paints the new order untransitioned, the second re-arms
+			// the transition for the next drag.
+			requestAnimationFrame(() => requestAnimationFrame(() => (this.settling = false)));
 		}
 
 		this.activeId = null;
