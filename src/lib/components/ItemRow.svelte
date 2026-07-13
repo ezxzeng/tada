@@ -48,12 +48,27 @@
 	}
 
 	function onKeydown(event: KeyboardEvent) {
+		// Let the delete button keep its own Enter/Space activation.
+		if (!(event.target instanceof HTMLInputElement)) return;
 		if (event.key === 'Enter') {
 			event.preventDefault();
 			commit();
 		} else if (event.key === 'Escape') {
 			setEditing(false);
 		}
+	}
+
+	// The editor is torn down by the focusout commit, so it must survive long enough
+	// for the delete button's click to land. Suppressing the default mousedown keeps
+	// focus on the input in the browsers that don't focus a button on click (Safari,
+	// Firefox); the ones that do focus it land inside the row, which onFocusout ignores.
+	function onDeletePointer(event: MouseEvent) {
+		event.preventDefault();
+	}
+
+	function requestDelete() {
+		setEditing(false);
+		onDelete(item);
 	}
 
 	// Commit when focus leaves the row entirely, not when it moves between the
@@ -67,7 +82,7 @@
 	}
 </script>
 
-<div class="card row" class:checked={item.checked}>
+<div class="card row" class:checked={item.checked} class:editing>
 	<input
 		type="checkbox"
 		checked={item.checked}
@@ -85,14 +100,25 @@
 				maxlength="200"
 				aria-label="Item"
 			/>
-			<input
-				type="text"
-				class="note-input"
-				bind:value={note}
-				maxlength="300"
-				placeholder="Qty / note"
-				aria-label="Quantity or note"
-			/>
+			<div class="edit-aside">
+				<input
+					type="text"
+					class="note-input"
+					bind:value={note}
+					maxlength="300"
+					placeholder="Qty / note"
+					aria-label="Quantity or note"
+				/>
+				<button
+					type="button"
+					class="delete"
+					onmousedown={onDeletePointer}
+					onclick={requestDelete}
+					aria-label="Delete {item.title}"
+				>
+					Delete
+				</button>
+			</div>
 		</div>
 	{:else}
 		<button class="text" onclick={startEdit} aria-label="Edit {item.title}">
@@ -101,23 +127,22 @@
 		</button>
 	{/if}
 
-	<button class="icon danger" onclick={() => onDelete(item)} aria-label="Delete {item.title}">
-		✕
-	</button>
-
-	{#if onPress}
-		<span
-			class="handle"
-			role="button"
-			tabindex="-1"
-			aria-label="Reorder {item.title}"
-			onpointerdown={(event) => onPress?.(event, item)}
-		>
-			⠿
-		</span>
-	{:else}
-		<!-- Keeps the delete button in line with the reorderable rows above. -->
-		<span class="handle" aria-hidden="true"></span>
+	<!-- The editor takes the handle's width back: reordering isn't reachable mid-edit anyway. -->
+	{#if !editing}
+		{#if onPress}
+			<span
+				class="handle"
+				role="button"
+				tabindex="-1"
+				aria-label="Reorder {item.title}"
+				onpointerdown={(event) => onPress?.(event, item)}
+			>
+				⠿
+			</span>
+		{:else}
+			<!-- Keeps the text in line with the reorderable rows above. -->
+			<span class="handle" aria-hidden="true"></span>
+		{/if}
 	{/if}
 </div>
 
@@ -161,6 +186,16 @@
 		cursor: pointer;
 	}
 
+	/* Against the two-line editor, a centred checkbox floats in the gap between the
+	   lines. Pin it to the title input instead. */
+	.editing {
+		align-items: flex-start;
+	}
+
+	.editing input[type='checkbox'] {
+		margin-top: 1rem;
+	}
+
 	.text {
 		display: flex;
 		flex-direction: column;
@@ -187,37 +222,39 @@
 		font-size: 0.85rem;
 	}
 
+	/* The title gets a line to itself; the note shares the second one with Delete. */
 	.edit {
 		display: flex;
+		flex-direction: column;
 		flex: 1;
 		min-width: 0;
-		gap: 0.5rem;
+		gap: 0.4rem;
 		padding: 0.4rem 0;
 	}
 
 	.edit input {
-		flex: 1 1 auto;
 		min-width: 0;
 	}
 
+	.edit-aside {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
 	.note-input {
-		flex: 0 1 8.5rem;
+		flex: 1 1 auto;
 	}
 
-	@media (max-width: 480px) {
-		.note-input {
-			flex-basis: 6.5rem;
-		}
-	}
-
-	.icon {
-		padding: 0.5rem;
-		color: var(--muted);
-		font-size: 1rem;
+	.delete {
 		flex-shrink: 0;
+		padding: 0.5rem 0.7rem;
+		color: var(--danger);
+		font-size: 0.9rem;
+		font-weight: 600;
 	}
 
-	.icon.danger:hover {
-		color: var(--danger);
+	.delete:hover {
+		text-decoration: underline;
 	}
 </style>
