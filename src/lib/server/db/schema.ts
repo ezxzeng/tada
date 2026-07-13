@@ -18,7 +18,7 @@ export const lists = pgTable(
 		id: text('id').primaryKey(),
 		groupId: text('group_id')
 			.notNull()
-			.references(() => groups.id, { onDelete: 'cascade' }),
+			.references(() => groups.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
 		name: text('name').notNull(),
 		position: integer('position').notNull().default(0),
 		createdAt: createdAt()
