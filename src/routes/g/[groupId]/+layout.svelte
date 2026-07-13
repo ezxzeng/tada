@@ -1,4 +1,6 @@
 <script lang="ts">
+	import tadaDark from '$lib/assets/tada-horizontal-dark.svg';
+	import tadaLight from '$lib/assets/tada-horizontal-light.svg';
 	import { setGroupSync } from '$lib/client/context.svelte';
 	import { GroupSync } from '$lib/client/sync.svelte';
 	import { rememberGroup } from '$lib/client/recents';
@@ -30,7 +32,12 @@
 {/if}
 
 <header>
-	<a class="home muted" href="/">tada</a>
+	<a class="home" href="/" aria-label="tada — home">
+		<picture>
+			<source srcset={tadaDark} media="(prefers-color-scheme: dark)" />
+			<img src={tadaLight} alt="" width="164" height="50" />
+		</picture>
+	</a>
 	<div class="title-row">
 		<h1><a href="/g/{sync.groupId}">{sync.state.group.name}</a></h1>
 		<ShareButton path="/g/{sync.groupId}" />
@@ -59,15 +66,17 @@
 	}
 
 	.home {
-		font-size: 0.8rem;
-		font-weight: 600;
-		text-decoration: none;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		display: inline-block;
 	}
 
-	.home:hover {
-		color: var(--accent);
+	.home img {
+		display: block;
+		width: 5rem;
+		height: auto;
+	}
+
+	.home:hover img {
+		opacity: 0.75;
 	}
 
 	.title-row {
