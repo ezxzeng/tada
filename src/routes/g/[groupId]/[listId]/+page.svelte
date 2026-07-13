@@ -60,8 +60,11 @@
 				<button class="btn" disabled={!renameValue.trim()}>Save</button>
 			</form>
 		{:else}
-			<h2>{activeList.name}</h2>
-			<button class="icon" onclick={startRename} aria-label="Rename list">✎</button>
+			<h2>
+				<button class="title" onclick={startRename} aria-label="Rename list">
+					{activeList.name}
+				</button>
+			</h2>
 		{/if}
 	</div>
 
@@ -147,13 +150,17 @@
 		overflow-wrap: anywhere;
 	}
 
-	.icon {
-		padding: 0.4rem 0.5rem;
-		color: var(--muted);
+	/* Looks like the plain heading; clicking it renames the list. */
+	.title {
+		font: inherit;
+		text-align: left;
+		color: inherit;
+		padding: 0;
 	}
 
-	.icon:hover {
-		color: var(--text);
+	.title:hover {
+		text-decoration: underline;
+		text-decoration-style: dotted;
 	}
 
 	.rename {

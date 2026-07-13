@@ -120,6 +120,13 @@ export class GroupSync {
 		return `/api/groups/${this.groupId}${path}`;
 	}
 
+	// ---- Group ----
+
+	async renameGroup(name: string): Promise<void> {
+		this.state.group.name = name;
+		await this.#mutate('PATCH', this.#api(''), { name });
+	}
+
 	// ---- Lists ----
 
 	async addList(name: string): Promise<string | null> {
