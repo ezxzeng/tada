@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
 import { groups } from '$lib/server/db/schema';
-import { bumpAndGetState, getGroupState, getGroupVersion } from '$lib/server/groups';
+import { getGroupState, getGroupVersion } from '$lib/server/groups';
 import { readJson } from '$lib/server/api';
 import type { RequestHandler } from './$types';
 
@@ -31,7 +31,12 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	const body = await readJson(request, renameGroupSchema);
 	await getGroupVersion(groupId); // throws 404 if the group doesn't exist
 
-	await db.update(groups).set({ name: body.name }).where(eq(groups.id, groupId));
+	// The rename and the bump both hit the group's own row, which a
+	// data-modifying CTE can't touch twice — set both columns in one UPDATE.
+	await db
+		.update(groups)
+		.set({ name: body.name, version: sql`${groups.version} + 1` })
+		.where(eq(groups.id, groupId));
 
-	return json(await bumpAndGetState(groupId));
+	return json(await getGroupState(groupId));
 };

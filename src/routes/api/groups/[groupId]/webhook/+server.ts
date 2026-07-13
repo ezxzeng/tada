@@ -1,10 +1,10 @@
 import { error, json } from '@sveltejs/kit';
-import { inArray } from 'drizzle-orm';
+import { inArray, type SQLWrapper } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
 import { items } from '$lib/server/db/schema';
-import { bumpVersion, getGroupState } from '$lib/server/groups';
+import { getGroupState, runMutation } from '$lib/server/groups';
 import type { GroupState, TodoList } from '$lib/types';
 import type { RequestHandler } from './$types';
 
@@ -158,7 +158,9 @@ export const POST: RequestHandler = async ({ params, request, url }) => {
 		list.items.filter((i) => i.title.toLowerCase() === title.toLowerCase());
 
 	const now = new Date().toISOString();
-	let changed = false;
+	// Collected unexecuted, then run together with the version bump in one
+	// atomic statement at the end.
+	const mutations: SQLWrapper[] = [];
 	let body: Record<string, unknown>;
 	const speech: string[] = [];
 
@@ -189,11 +191,16 @@ export const POST: RequestHandler = async ({ params, request, url }) => {
 			}
 		}
 
-		if (rows.length > 0) await db.insert(items).values(rows);
+		if (rows.length > 0) mutations.push(db.insert(items).values(rows).returning({ id: items.id }));
 		if (restoreIds.length > 0) {
-			await db.update(items).set({ checked: false, updatedAt: now }).where(inArray(items.id, restoreIds));
+			mutations.push(
+				db
+					.update(items)
+					.set({ checked: false, updatedAt: now })
+					.where(inArray(items.id, restoreIds))
+					.returning({ id: items.id })
+			);
 		}
-		changed = rows.length > 0 || restoreIds.length > 0;
 
 		if (added.length > 0) speech.push(`Added ${spoken(added)} to ${list.name}.`);
 		if (restored.length > 0) speech.push(`Put ${spoken(restored)} back on ${list.name}.`);
@@ -214,8 +221,9 @@ export const POST: RequestHandler = async ({ params, request, url }) => {
 			removed.push(matches[0].title);
 			removeIds.push(...matches.map((i) => i.id));
 		}
-		if (removeIds.length > 0) await db.delete(items).where(inArray(items.id, removeIds));
-		changed = removeIds.length > 0;
+		if (removeIds.length > 0) {
+			mutations.push(db.delete(items).where(inArray(items.id, removeIds)).returning({ id: items.id }));
+		}
 
 		if (removed.length > 0) speech.push(`Removed ${spoken(removed)} from ${list.name}.`);
 		if (notFound.length > 0) speech.push(`${spoken(notFound)} wasn't on ${list.name}.`);
@@ -237,9 +245,14 @@ export const POST: RequestHandler = async ({ params, request, url }) => {
 			flipIds.push(...matches.filter((i) => i.checked !== target).map((i) => i.id));
 		}
 		if (flipIds.length > 0) {
-			await db.update(items).set({ checked: target, updatedAt: now }).where(inArray(items.id, flipIds));
+			mutations.push(
+				db
+					.update(items)
+					.set({ checked: target, updatedAt: now })
+					.where(inArray(items.id, flipIds))
+					.returning({ id: items.id })
+			);
 		}
-		changed = flipIds.length > 0;
 
 		if (affected.length > 0) {
 			speech.push(
@@ -252,7 +265,8 @@ export const POST: RequestHandler = async ({ params, request, url }) => {
 		body = { [target ? 'completed' : 'uncompleted']: affected, notFound };
 	}
 
-	if (changed) await bumpVersion(params.groupId);
+	const [first, ...rest] = mutations;
+	if (first) await runMutation(params.groupId, first, ...rest);
 
 	return json(
 		{ ok: true, action: req.action, list: { id: list.id, name: list.name }, ...body, speech: speech.join(' ') },

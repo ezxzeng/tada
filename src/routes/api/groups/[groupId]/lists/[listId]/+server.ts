@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
 import { lists } from '$lib/server/db/schema';
-import { assertListInGroup, bumpAndGetState } from '$lib/server/groups';
+import { assertListInGroup, runMutationAndGetState } from '$lib/server/groups';
 import { readJson } from '$lib/server/api';
 import type { RequestHandler } from './$types';
 
@@ -16,16 +16,22 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	const body = await readJson(request, renameListSchema);
 	await assertListInGroup(groupId, listId);
 
-	await db.update(lists).set({ name: body.name }).where(eq(lists.id, listId));
-
-	return json(await bumpAndGetState(groupId));
+	return json(
+		await runMutationAndGetState(
+			groupId,
+			db.update(lists).set({ name: body.name }).where(eq(lists.id, listId)).returning({ id: lists.id })
+		)
+	);
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {
 	const { groupId, listId } = params;
 	await assertListInGroup(groupId, listId);
 
-	await db.delete(lists).where(eq(lists.id, listId)); // items cascade
-
-	return json(await bumpAndGetState(groupId));
+	return json(
+		await runMutationAndGetState(
+			groupId,
+			db.delete(lists).where(eq(lists.id, listId)).returning({ id: lists.id }) // items cascade
+		)
+	);
 };

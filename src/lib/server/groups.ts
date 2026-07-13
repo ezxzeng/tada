@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, type SQLWrapper } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { db } from './db';
 import { groups, items, lists } from './db/schema';
@@ -33,16 +33,39 @@ export async function getGroupState(groupId: string): Promise<GroupState> {
 	};
 }
 
-export async function bumpVersion(groupId: string): Promise<void> {
-	await db
-		.update(groups)
-		.set({ version: sql`${groups.version} + 1` })
-		.where(eq(groups.id, groupId));
+/**
+ * Run one or more data-modifying queries and bump the group version in a
+ * single statement (the queries become data-modifying CTEs of the UPDATE on
+ * groups). neon-http has no transactions, so as separate statements a failure
+ * between the write and the bump would commit a change pollers never see.
+ * Each query must have `.returning()` — the bump is conditioned on at least
+ * one CTE having produced a row, so no-op mutations don't bump.
+ */
+export async function runMutation(
+	groupId: string,
+	...mutations: [SQLWrapper, ...SQLWrapper[]]
+): Promise<void> {
+	// No explicit parens: the sql template wraps interpolated query builders in
+	// parentheses already, which is exactly the CTE body syntax.
+	const ctes = sql.join(
+		mutations.map((m, i) => sql`${sql.raw(`m${i}`)} as ${m}`),
+		sql`, `
+	);
+	const touched = sql.join(
+		mutations.map((_, i) => sql`exists (select 1 from ${sql.raw(`m${i}`)})`),
+		sql` or `
+	);
+	await db.execute(
+		sql`with ${ctes} update ${groups} set version = version + 1 where ${groups.id} = ${groupId} and (${touched})`
+	);
 }
 
-/** Finish a mutation: bump the group version and return the fresh full state. */
-export async function bumpAndGetState(groupId: string): Promise<GroupState> {
-	await bumpVersion(groupId);
+/** Finish a mutation: run it, bump the group version, return the fresh full state. */
+export async function runMutationAndGetState(
+	groupId: string,
+	...mutations: [SQLWrapper, ...SQLWrapper[]]
+): Promise<GroupState> {
+	await runMutation(groupId, ...mutations);
 	return getGroupState(groupId);
 }
 

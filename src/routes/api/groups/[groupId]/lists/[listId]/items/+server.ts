@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
 import { items } from '$lib/server/db/schema';
-import { assertListInGroup, bumpAndGetState } from '$lib/server/groups';
+import { assertListInGroup, getGroupState, runMutationAndGetState } from '$lib/server/groups';
 import { readJson } from '$lib/server/api';
 import type { RequestHandler } from './$types';
 
@@ -27,15 +27,18 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		.from(items)
 		.where(eq(items.listId, listId));
 
-	await db.insert(items).values({
-		id: nanoid(12),
-		listId,
-		title: body.title,
-		note: body.note || null,
-		position: Number(row?.max ?? -1) + 1
-	});
+	const insert = db
+		.insert(items)
+		.values({
+			id: nanoid(12),
+			listId,
+			title: body.title,
+			note: body.note || null,
+			position: Number(row?.max ?? -1) + 1
+		})
+		.returning({ id: items.id });
 
-	return json(await bumpAndGetState(groupId), { status: 201 });
+	return json(await runMutationAndGetState(groupId, insert), { status: 201 });
 };
 
 // Reorder: `ids` is every item in the list, in its new order. Ids that no
@@ -48,7 +51,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	const rows = await db.select({ id: items.id }).from(items).where(eq(items.listId, listId));
 	const known = new Set(rows.map((r) => r.id));
 	const ordered = body.ids.filter((id) => known.has(id));
-	if (ordered.length === 0) return json(await bumpAndGetState(groupId));
+	if (ordered.length === 0) return json(await getGroupState(groupId));
 
 	// The neon-http driver has no interactive transactions, so write all the
 	// new positions with a single CASE update.
@@ -56,14 +59,15 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		ordered.map((id, i) => sql`when ${items.id} = ${id} then ${i}`),
 		sql` `
 	);
-	await db
+	const update = db
 		.update(items)
 		// The cast is required: bound parameters arrive untyped, so postgres can't
 		// infer the CASE result type on its own.
 		.set({ position: sql`(case ${cases} end)::int` })
-		.where(and(eq(items.listId, listId), inArray(items.id, ordered)));
+		.where(and(eq(items.listId, listId), inArray(items.id, ordered)))
+		.returning({ id: items.id });
 
-	return json(await bumpAndGetState(groupId));
+	return json(await runMutationAndGetState(groupId, update));
 };
 
 // Clear completed: deletes every checked item in the list.
@@ -71,7 +75,11 @@ export const DELETE: RequestHandler = async ({ params }) => {
 	const { groupId, listId } = params;
 	await assertListInGroup(groupId, listId);
 
-	await db.delete(items).where(and(eq(items.listId, listId), eq(items.checked, true)));
+	// With nothing checked the CTE returns no rows and the bump is skipped.
+	const del = db
+		.delete(items)
+		.where(and(eq(items.listId, listId), eq(items.checked, true)))
+		.returning({ id: items.id });
 
-	return json(await bumpAndGetState(groupId));
+	return json(await runMutationAndGetState(groupId, del));
 };

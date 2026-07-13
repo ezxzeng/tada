@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
 import { lists } from '$lib/server/db/schema';
-import { bumpAndGetState, getGroupVersion } from '$lib/server/groups';
+import { getGroupVersion, runMutationAndGetState } from '$lib/server/groups';
 import { readJson } from '$lib/server/api';
 import type { RequestHandler } from './$types';
 
@@ -17,7 +17,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	await getGroupVersion(groupId); // 404 if the group doesn't exist
 
 	const id = nanoid(12);
-	await db.insert(lists).values({ id, groupId, name: body.name });
+	const insert = db.insert(lists).values({ id, groupId, name: body.name }).returning({ id: lists.id });
 
-	return json({ ...(await bumpAndGetState(groupId)), createdListId: id }, { status: 201 });
+	return json({ ...(await runMutationAndGetState(groupId, insert)), createdListId: id }, { status: 201 });
 };
