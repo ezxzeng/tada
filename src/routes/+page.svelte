@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import tadaDark from '$lib/assets/tada-dark.svg';
+	import tadaLight from '$lib/assets/tada-light.svg';
 	import {
 		forgetGroup,
 		getRecentGroups,
@@ -54,7 +56,10 @@
 </svelte:head>
 
 <header class="hero">
-	<h1>tada</h1>
+	<h1>
+		<img class="light-only" src={tadaLight} alt="tada" width="120" height="143" />
+		<img class="dark-only" src={tadaDark} alt="tada" width="120" height="143" />
+	</h1>
 	<p class="muted">
 		Shared lists without accounts. Create a group, send the link to your roommates, done.
 	</p>
@@ -112,9 +117,9 @@
 		padding: 2rem 0 1.5rem;
 	}
 
-	.hero h1 {
-		font-size: 2rem;
-		letter-spacing: -0.02em;
+	.hero h1 img {
+		width: 7rem;
+		height: auto;
 	}
 
 	.create {

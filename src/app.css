@@ -1,29 +1,44 @@
+/* Tokens follow `color-scheme`, which defaults to the OS preference and is pinned to one
+   value by the theme toggle (via data-theme on <html>). */
 :root {
-	--bg: #f4f5f7;
-	--card: #ffffff;
-	--text: #1c2433;
-	--muted: #6b7684;
-	--accent: #0d9488;
-	--accent-soft: #0d948818;
-	--accent-contrast: #ffffff;
-	--border: #e3e7ec;
-	--danger: #d43d3d;
+	color-scheme: light dark;
+
+	--bg: light-dark(#f4f5f7, #10151d);
+	--card: light-dark(#ffffff, #1a2230);
+	--text: light-dark(#1c2433, #e6eaf0);
+	--muted: light-dark(#6b7684, #8b96a5);
+	--accent: light-dark(#0d9488, #2fbdaf);
+	--accent-soft: light-dark(#0d948818, #2fbdaf22);
+	--accent-contrast: light-dark(#ffffff, #06211e);
+	--border: light-dark(#e3e7ec, #2a3546);
+	--danger: light-dark(#d43d3d, #f07070);
 	--radius: 12px;
-	--shadow: 0 1px 3px rgb(16 24 40 / 0.08);
+	--shadow: 0 1px 3px light-dark(rgb(16 24 40 / 0.08), rgb(0 0 0 / 0.4));
+}
+
+:root[data-theme='light'] {
+	color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+	color-scheme: dark;
+}
+
+/* Artwork that can't be recoloured with tokens ships as two files; show the right one. */
+:root[data-theme='dark'] .light-only,
+:root[data-theme='light'] .dark-only {
+	display: none;
 }
 
 @media (prefers-color-scheme: dark) {
-	:root {
-		--bg: #10151d;
-		--card: #1a2230;
-		--text: #e6eaf0;
-		--muted: #8b96a5;
-		--accent: #2fbdaf;
-		--accent-soft: #2fbdaf22;
-		--accent-contrast: #06211e;
-		--border: #2a3546;
-		--danger: #f07070;
-		--shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+	:root:not([data-theme='light']) .light-only {
+		display: none;
+	}
+}
+
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme='dark']) .dark-only {
+		display: none;
 	}
 }
 
