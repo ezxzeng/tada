@@ -8,7 +8,10 @@
 	function submit(event: SubmitEvent) {
 		event.preventDefault();
 		const trimmed = title.trim();
-		if (!trimmed) return;
+		if (!trimmed) {
+			titleInput.focus();
+			return;
+		}
 		onAdd(trimmed, note.trim());
 		title = '';
 		note = '';
@@ -33,7 +36,7 @@
 		maxlength="300"
 		aria-label="Quantity or note"
 	/>
-	<button class="btn" disabled={!title.trim()} aria-label="Add item">Add</button>
+	<button class="btn" class:empty={!title.trim()} aria-label="Add item">Add</button>
 </form>
 
 <style>
@@ -44,6 +47,10 @@
 
 	.note {
 		flex: 0 1 8.5rem;
+	}
+
+	.empty {
+		opacity: 0.5;
 	}
 
 	@media (max-width: 480px) {
