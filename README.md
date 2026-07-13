@@ -1,5 +1,9 @@
 # tada
-![tada](src/lib/assets/tada-light.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="src/lib/assets/tada-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="src/lib/assets/tada-light.svg">
+  <img alt="tada-icon" src="src/lib/assets/tada-light.svg">
+</picture>
 
 Shared todo/grocery lists without accounts, in the spirit of [spliit](https://github.com/spliit-app/spliit):
 create a **group**, share its link, and anyone with the link can add, check off, and edit items.
