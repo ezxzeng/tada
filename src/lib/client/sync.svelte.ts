@@ -148,7 +148,7 @@ export class GroupSync {
 			title,
 			note: note || null,
 			checked: false,
-			position: 0,
+			position: list.items.reduce((max, i) => Math.max(max, i.position), -1) + 1,
 			createdAt: now,
 			updatedAt: now
 		});
@@ -177,6 +177,28 @@ export class GroupSync {
 		const list = this.state.lists.find((l) => l.id === item.listId);
 		if (list) list.items = list.items.filter((i) => i.id !== item.id);
 		await this.#mutate('DELETE', this.#api(`/lists/${item.listId}/items/${item.id}`));
+	}
+
+	/**
+	 * Move the list's unchecked items into `orderedIds`. Checked items keep their
+	 * relative order and sit after them, so positions stay unique across the list.
+	 */
+	async reorderItems(listId: string, orderedIds: string[]): Promise<void> {
+		const list = this.state.lists.find((l) => l.id === listId);
+		if (!list) return;
+
+		const moving = new Set(orderedIds);
+		const byId = new Map(list.items.map((i) => [i.id, i]));
+		const ordered = [
+			...orderedIds.map((id) => byId.get(id)).filter((i) => i !== undefined),
+			...list.items.filter((i) => !moving.has(i.id))
+		];
+		ordered.forEach((item, index) => (item.position = index));
+		list.items = ordered;
+
+		await this.#mutate('PATCH', this.#api(`/lists/${listId}/items`), {
+			ids: ordered.map((i) => i.id)
+		});
 	}
 
 	async clearCompleted(listId: string): Promise<void> {

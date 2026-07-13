@@ -1,10 +1,7 @@
 <script lang="ts">
-	import tadaDark from '$lib/assets/tada-horizontal-dark.svg';
-	import tadaLight from '$lib/assets/tada-horizontal-light.svg';
 	import { setGroupSync } from '$lib/client/context.svelte';
 	import { GroupSync } from '$lib/client/sync.svelte';
 	import { rememberGroup } from '$lib/client/recents';
-	import ShareButton from '$lib/components/ShareButton.svelte';
 
 	let { data, children } = $props();
 
@@ -32,14 +29,7 @@
 {/if}
 
 <header>
-	<a class="home" href="/" aria-label="tada — home">
-		<img class="light-only" src={tadaLight} alt="" width="164" height="50" />
-		<img class="dark-only" src={tadaDark} alt="" width="164" height="50" />
-	</a>
-	<div class="title-row">
-		<h1><a href="/g/{sync.groupId}">{sync.state.group.name}</a></h1>
-		<ShareButton path="/g/{sync.groupId}" />
-	</div>
+	<h1><a href="/g/{sync.groupId}">{sync.state.group.name}</a></h1>
 </header>
 
 {@render children()}
@@ -61,34 +51,6 @@
 
 	header {
 		margin-bottom: 1.25rem;
-	}
-
-	.home {
-		display: flex;
-		align-items: center;
-		/* Matches the fixed theme toggle's height so the logo row shares its line and
-		   the title row below stays clear of it on narrow screens. */
-		min-height: 2.375rem;
-		width: fit-content;
-	}
-
-	/* No `display` here: the global .light-only/.dark-only rules own that. */
-	.home img {
-		width: 5rem;
-		height: auto;
-		vertical-align: bottom;
-	}
-
-	.home:hover img {
-		opacity: 0.75;
-	}
-
-	.title-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		margin-top: 0.25rem;
 	}
 
 	h1 {

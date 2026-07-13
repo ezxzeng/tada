@@ -60,7 +60,6 @@ those as an additive push, then the code, then a cleanup push.
 - Every mutation bumps `groups.version`. Clients poll `GET /api/groups/[groupId]?since=<version>`
   (only while the tab is visible) and get a tiny "unchanged" reply or the full group state.
   Mutations respond with fresh state too, and the UI applies changes optimistically.
-- Identity is attribution, not auth: `localStorage` remembers which member of each group this
-  browser is. Anyone with the link can claim any name — that's the intended trust model.
+- Anyone with the link can access the group and its lists — that's the intended trust model.
 
 Don't keep secrets in a list, and don't post group links publicly.
