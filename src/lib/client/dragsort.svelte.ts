@@ -3,7 +3,12 @@
 const LONG_PRESS_MS = 320;
 /** Moving further than this before the long press fires means "scroll", not "drag". */
 const SLOP_PX = 8;
+/** Dragging within this distance of the top/bottom of the viewport scrolls the page. */
+const EDGE_PX = 72;
+/** Auto-scroll speed at the very edge of the viewport, in px per frame. */
+const MAX_SCROLL_STEP = 14;
 
+/** Row geometry, in document coordinates so it survives scrolling mid-drag. */
 type Row = { id: string; top: number; height: number };
 
 export class DragSort {
@@ -18,7 +23,9 @@ export class DragSort {
 	#from = 0;
 	#to = 0;
 	#startY = 0;
+	#pointerY = 0;
 	#pressTimer: ReturnType<typeof setTimeout> | null = null;
+	#scrollFrame: number | null = null;
 	#pending: { el: HTMLElement; id: string; x: number; y: number } | null = null;
 	#cleanup: (() => void) | null = null;
 
@@ -49,27 +56,32 @@ export class DragSort {
 			const touch = e.touches[0];
 			if (!touch) return;
 			if (this.activeId) {
-				// Hold the page still while dragging — needs a non-passive listener.
+				// Only this drag may scroll the page — needs a non-passive listener.
 				e.preventDefault();
-				this.#move(touch.clientY);
+				this.#track(touch.clientY);
 			} else {
 				this.#maybeCancel(touch.clientX, touch.clientY);
 			}
 		};
 		const onPointerMove = (e: PointerEvent) => {
 			if (e.pointerType === 'touch') return; // handled by the touch listener
-			if (this.activeId) this.#move(e.clientY);
+			if (this.activeId) this.#track(e.clientY);
 			else this.#maybeCancel(e.clientX, e.clientY);
 		};
 		const onUp = () => this.#end(true);
 		const onCancel = () => this.#end(false);
+		// A page scroll before the long press fires means the user is scrolling, not
+		// dragging. Once dragging, the only scrolling is our own auto-scroll.
+		const onScroll = () => {
+			if (!this.activeId) this.#end(false);
+		};
 
 		window.addEventListener('touchmove', onTouchMove, { passive: false });
 		window.addEventListener('pointermove', onPointerMove);
 		window.addEventListener('pointerup', onUp);
 		window.addEventListener('pointercancel', onCancel);
 		window.addEventListener('contextmenu', onCancel);
-		window.addEventListener('scroll', onCancel);
+		window.addEventListener('scroll', onScroll);
 
 		this.#cleanup = () => {
 			window.removeEventListener('touchmove', onTouchMove);
@@ -77,7 +89,7 @@ export class DragSort {
 			window.removeEventListener('pointerup', onUp);
 			window.removeEventListener('pointercancel', onCancel);
 			window.removeEventListener('contextmenu', onCancel);
-			window.removeEventListener('scroll', onCancel);
+			window.removeEventListener('scroll', onScroll);
 			this.#cleanup = null;
 		};
 	}
@@ -98,7 +110,7 @@ export class DragSort {
 			const id = el.dataset.itemId;
 			if (!id) continue;
 			const rect = el.getBoundingClientRect();
-			rows.push({ id, top: rect.top, height: rect.height });
+			rows.push({ id, top: rect.top + window.scrollY, height: rect.height });
 		}
 		const from = rows.findIndex((r) => r.id === start.id);
 		if (from === -1 || rows.length < 2) return this.#end(false);
@@ -107,13 +119,42 @@ export class DragSort {
 		this.#gap = rows[1].top - (rows[0].top + rows[0].height);
 		this.#from = from;
 		this.#to = from;
-		this.#startY = start.y;
+		this.#pointerY = start.y;
+		this.#startY = start.y + window.scrollY;
 		this.activeId = start.id;
 		this.offsets = { [start.id]: 0 };
 		navigator.vibrate?.(12);
+		this.#scrollFrame = requestAnimationFrame(() => this.#autoScroll());
 	}
 
-	#move(clientY: number): void {
+	/** Record where the pointer is (viewport coords) and re-place the dragged row. */
+	#track(clientY: number): void {
+		this.#pointerY = clientY;
+		this.#move();
+	}
+
+	/**
+	 * While the pointer sits near the top or bottom edge, scroll the page — the
+	 * dragged row keeps following the pointer as fresh rows come into view.
+	 */
+	#autoScroll(): void {
+		if (!this.activeId) return;
+		const y = this.#pointerY;
+		const height = window.innerHeight;
+
+		let step = 0;
+		if (y < EDGE_PX) step = -MAX_SCROLL_STEP * ((EDGE_PX - y) / EDGE_PX);
+		else if (y > height - EDGE_PX) step = MAX_SCROLL_STEP * ((y - (height - EDGE_PX)) / EDGE_PX);
+
+		if (step !== 0) {
+			const before = window.scrollY;
+			window.scrollBy(0, step);
+			if (window.scrollY !== before) this.#move();
+		}
+		this.#scrollFrame = requestAnimationFrame(() => this.#autoScroll());
+	}
+
+	#move(): void {
 		const rows = this.#rows;
 		const from = this.#from;
 		const dragged = rows[from];
@@ -121,9 +162,10 @@ export class DragSort {
 		const last = rows[rows.length - 1];
 
 		// Keep the dragged row inside the list's bounds.
+		const pointerY = this.#pointerY + window.scrollY;
 		const min = first.top - dragged.top;
 		const max = last.top + last.height - dragged.height - dragged.top;
-		const delta = Math.min(Math.max(clientY - this.#startY, min), max);
+		const delta = Math.min(Math.max(pointerY - this.#startY, min), max);
 		const draggedTop = dragged.top + delta;
 
 		// The slot whose resting position is closest to where the row now sits.
@@ -152,7 +194,9 @@ export class DragSort {
 
 	#end(commit: boolean): void {
 		if (this.#pressTimer) clearTimeout(this.#pressTimer);
+		if (this.#scrollFrame !== null) cancelAnimationFrame(this.#scrollFrame);
 		this.#pressTimer = null;
+		this.#scrollFrame = null;
 		this.#pending = null;
 		this.#cleanup?.();
 
