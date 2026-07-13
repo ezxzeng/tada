@@ -50,6 +50,13 @@ export class GroupSync {
 		if (this.#polling || this.#mutating > 0) return;
 		this.#polling = true;
 		try {
+			// After going offline, local state may hold an optimistic change the
+			// server never received while both sides still agree on `version`, so a
+			// `since` poll would report `unchanged` forever. Refetch everything once.
+			if (this.offline) {
+				await this.#forceResync();
+				return;
+			}
 			const res = await fetch(`/api/groups/${this.groupId}?since=${this.state.version}`);
 			if (res.status === 404) {
 				this.gone = true;
