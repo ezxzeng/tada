@@ -45,6 +45,7 @@
 
 <svelte:head>
 	<title>{sync.state.group.name} · tada</title>
+	<meta name="robots" content="noindex" />
 </svelte:head>
 
 {#if sync.gone}
