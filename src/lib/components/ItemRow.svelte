@@ -1,18 +1,13 @@
 <script lang="ts">
-	import MemberChip from './MemberChip.svelte';
-	import type { Item, Member } from '$lib/types';
+	import type { Item } from '$lib/types';
 
 	let {
 		item,
-		addedBy,
-		checkedBy,
 		onToggle,
 		onDelete,
 		onSave
 	}: {
 		item: Item;
-		addedBy?: Member;
-		checkedBy?: Member;
 		onToggle: (item: Item) => void;
 		onDelete: (item: Item) => void;
 		onSave: (item: Item, title: string, note: string) => void;
@@ -62,11 +57,6 @@
 				{#if item.note}<span class="note muted">{item.note}</span>{/if}
 			</span>
 		</label>
-		{#if item.checked && checkedBy}
-			<MemberChip name={checkedBy.name} small />
-		{:else if !item.checked && addedBy}
-			<MemberChip name={addedBy.name} small />
-		{/if}
 		<button class="icon" onclick={startEdit} aria-label="Edit {item.title}">✎</button>
 		<button class="icon danger" onclick={() => onDelete(item)} aria-label="Delete {item.title}">
 			✕

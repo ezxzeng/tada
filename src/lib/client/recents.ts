@@ -1,28 +1,9 @@
 import { browser } from '$app/environment';
 
-// Identity is attribution, not auth: we just remember which member of each
-// group this browser is, plus which groups it has visited.
+// Groups are anonymous: the only thing this browser remembers is which groups
+// it has visited, so it can offer them as shortcuts on the home page.
 
-const MEMBER_PREFIX = 'todo:member:';
 const RECENTS_KEY = 'todo:recentGroups';
-
-export function getStoredMemberId(groupId: string): string | null {
-	if (!browser) return null;
-	try {
-		return localStorage.getItem(MEMBER_PREFIX + groupId);
-	} catch {
-		return null;
-	}
-}
-
-export function storeMemberId(groupId: string, memberId: string): void {
-	if (!browser) return;
-	try {
-		localStorage.setItem(MEMBER_PREFIX + groupId, memberId);
-	} catch {
-		// localStorage unavailable (private mode etc.) — identity just won't persist
-	}
-}
 
 export type RecentGroup = { id: string; name: string; lastVisited: number };
 

@@ -1,15 +1,14 @@
 <script lang="ts">
-	import { GroupContext, setGroupContext } from '$lib/client/context.svelte';
-	import { rememberGroup } from '$lib/client/identity';
-	import MemberPicker from '$lib/components/MemberPicker.svelte';
+	import { setGroupSync } from '$lib/client/context.svelte';
+	import { GroupSync } from '$lib/client/sync.svelte';
+	import { rememberGroup } from '$lib/client/recents';
 	import ShareButton from '$lib/components/ShareButton.svelte';
 
 	let { data, children } = $props();
 
 	// Deliberately captures only the initial load: later data flows in via replaceFromLoad below.
 	// svelte-ignore state_referenced_locally
-	const ctx = setGroupContext(new GroupContext(data.state));
-	const sync = ctx.sync;
+	const sync = setGroupSync(new GroupSync(data.state));
 
 	// Poll while mounted; the returned cleanup stops it.
 	$effect(() => sync.start());
@@ -18,13 +17,10 @@
 	$effect(() => {
 		rememberGroup(sync.state.group.id, sync.state.group.name);
 	});
-	$effect(() => {
-		ctx.loadIdentity();
-	});
 </script>
 
 <svelte:head>
-	<title>{sync.state.group.name} · todo-lst</title>
+	<title>{sync.state.group.name} · tada</title>
 </svelte:head>
 
 {#if sync.gone}
@@ -34,7 +30,7 @@
 {/if}
 
 <header>
-	<a class="home muted" href="/">todo-lst</a>
+	<a class="home muted" href="/">tada</a>
 	<div class="title-row">
 		<h1><a href="/g/{sync.groupId}">{sync.state.group.name}</a></h1>
 		<ShareButton path="/g/{sync.groupId}" />
@@ -42,15 +38,6 @@
 </header>
 
 {@render children()}
-
-{#if ctx.showPicker && !sync.gone}
-	<MemberPicker
-		groupName={sync.state.group.name}
-		members={sync.state.members}
-		onPick={(member) => ctx.identify(member.id)}
-		onJoin={(name) => ctx.joinAs(name)}
-	/>
-{/if}
 
 <style>
 	.banner {

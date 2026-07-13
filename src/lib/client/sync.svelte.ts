@@ -1,8 +1,6 @@
 import { untrack } from 'svelte';
 import { nanoid } from 'nanoid';
-import type { GroupState, Item, Member } from '$lib/types';
-
-type MutationResponse = GroupState & { memberId?: string };
+import type { GroupState, Item } from '$lib/types';
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -27,10 +25,6 @@ export class GroupSync {
 
 	get groupId(): string {
 		return this.state.group.id;
-	}
-
-	memberById(id: string | null): Member | undefined {
-		return id ? this.state.members.find((m) => m.id === id) : undefined;
 	}
 
 	/** Begin polling; returns a cleanup function (use inside $effect). */
@@ -97,7 +91,7 @@ export class GroupSync {
 		}
 	}
 
-	async #mutate(method: string, path: string, body?: unknown): Promise<MutationResponse | null> {
+	async #mutate(method: string, path: string, body?: unknown): Promise<GroupState | null> {
 		this.#mutating++;
 		try {
 			const res = await fetch(path, {
@@ -109,7 +103,7 @@ export class GroupSync {
 				await this.#forceResync();
 				return null;
 			}
-			const data = (await res.json()) as MutationResponse;
+			const data = (await res.json()) as GroupState;
 			this.offline = false;
 			this.#apply(data);
 			return data;
@@ -124,14 +118,6 @@ export class GroupSync {
 
 	#api(path: string): string {
 		return `/api/groups/${this.groupId}${path}`;
-	}
-
-	// ---- Members ----
-
-	/** Join (or claim) a member by name; returns the member id, or null on failure. */
-	async join(name: string): Promise<string | null> {
-		const data = await this.#mutate('POST', this.#api('/members'), { name });
-		return data?.memberId ?? null;
 	}
 
 	// ---- Lists ----
@@ -153,12 +139,7 @@ export class GroupSync {
 
 	// ---- Items ----
 
-	async addItem(
-		listId: string,
-		title: string,
-		note: string,
-		memberId: string | null
-	): Promise<void> {
+	async addItem(listId: string, title: string, note: string): Promise<void> {
 		const list = this.state.lists.find((l) => l.id === listId);
 		const now = new Date().toISOString();
 		list?.items.push({
@@ -168,26 +149,19 @@ export class GroupSync {
 			note: note || null,
 			checked: false,
 			position: 0,
-			addedByMemberId: memberId,
-			checkedByMemberId: null,
 			createdAt: now,
 			updatedAt: now
 		});
 		await this.#mutate('POST', this.#api(`/lists/${listId}/items`), {
 			title,
-			note: note || undefined,
-			memberId: memberId ?? undefined
+			note: note || undefined
 		});
 	}
 
-	async toggleItem(item: Item, memberId: string | null): Promise<void> {
+	async toggleItem(item: Item): Promise<void> {
 		const checked = !item.checked;
 		item.checked = checked;
-		item.checkedByMemberId = checked ? memberId : null;
-		await this.#mutate('PATCH', this.#api(`/lists/${item.listId}/items/${item.id}`), {
-			checked,
-			memberId: memberId ?? undefined
-		});
+		await this.#mutate('PATCH', this.#api(`/lists/${item.listId}/items/${item.id}`), { checked });
 	}
 
 	async editItem(item: Item, title: string, note: string): Promise<void> {
