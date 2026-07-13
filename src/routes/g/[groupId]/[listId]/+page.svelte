@@ -65,7 +65,9 @@
 		{/if}
 	</div>
 
-	<AddItemForm onAdd={(title, note) => sync.addItem(activeList.id, title, note)} />
+	<div class="add-bar">
+		<AddItemForm onAdd={(title, note) => sync.addItem(activeList.id, title, note)} />
+	</div>
 
 	<ul class="items">
 		{#each todo as item (item.id)}
@@ -152,6 +154,18 @@
 		display: flex;
 		gap: 0.5rem;
 		flex: 1;
+	}
+
+	/* Stays put while the list scrolls under it. The negative side margins plus
+	   matching padding let the background cover the shell's gutter, and the
+	   negative top margin keeps it flush with the viewport edge. */
+	.add-bar {
+		position: sticky;
+		top: 0;
+		z-index: 4;
+		margin: -1rem -1rem 0;
+		padding: 1rem;
+		background: var(--bg);
 	}
 
 	.items {
