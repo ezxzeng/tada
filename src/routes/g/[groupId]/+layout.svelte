@@ -64,7 +64,12 @@
 	}
 
 	.home {
-		display: inline-block;
+		display: flex;
+		align-items: center;
+		/* Matches the fixed theme toggle's height so the logo row shares its line and
+		   the title row below stays clear of it on narrow screens. */
+		min-height: 2.375rem;
+		width: fit-content;
 	}
 
 	/* No `display` here: the global .light-only/.dark-only rules own that. */

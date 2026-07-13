@@ -25,9 +25,11 @@
 		padding: 1rem 1rem 4rem;
 	}
 
+	/* Top aligned with the shell's padding so the toggle lines up with the page's
+	   first row (the tada logo) once the viewport is too narrow for a side gutter. */
 	.corner {
 		position: fixed;
-		top: 0.75rem;
+		top: 1rem;
 		right: 0.75rem;
 		z-index: 10;
 	}
