@@ -47,7 +47,7 @@
 	async function regenerate() {
 		if (regenerating) return;
 		const confirmed = confirm(
-			'Generate a new link? The current link and any webhook URLs using it will stop working immediately.'
+			'Generate a new link? The current share link will stop working immediately. Scoped integrations will keep working.'
 		);
 		if (!confirmed) return;
 

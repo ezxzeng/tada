@@ -19,7 +19,8 @@
 	});
 
 	// The group root is the only place the name isn't a back-link, so rename lives there.
-	const atRoot = $derived(page.params.listId === undefined);
+	const atRoot = $derived(page.route.id === '/g/[groupId]');
+	const atSettings = $derived(page.route.id === '/g/[groupId]/settings');
 
 	let renaming = $state(false);
 	let renameValue = $state('');
@@ -54,7 +55,7 @@
 	<div class="banner">Offline — changes may not be saved.</div>
 {/if}
 
-<header>
+<header class:with-tabs={atRoot || atSettings}>
 	{#if atRoot && renaming}
 		<form class="rename" onsubmit={saveRename}>
 			<!-- svelte-ignore a11y_autofocus -->
@@ -79,6 +80,13 @@
 	{/if}
 </header>
 
+{#if atRoot || atSettings}
+	<nav class="tabs" aria-label="Group sections">
+		<a href="/g/{sync.groupId}" aria-current={atRoot ? 'page' : undefined}>Lists</a>
+		<a href="/g/{sync.groupId}/settings" aria-current={atSettings ? 'page' : undefined}>Settings</a>
+	</nav>
+{/if}
+
 {@render children()}
 
 <style>
@@ -98,6 +106,10 @@
 
 	header {
 		margin-bottom: 1.25rem;
+	}
+
+	header.with-tabs {
+		margin-bottom: 0.75rem;
 	}
 
 	h1 {
@@ -127,5 +139,26 @@
 	.rename {
 		display: flex;
 		gap: 0.5rem;
+	}
+
+	.tabs {
+		display: flex;
+		gap: 0.25rem;
+		margin-bottom: 1.25rem;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.tabs a {
+		padding: 0.45rem 0.7rem;
+		border-bottom: 2px solid transparent;
+		color: var(--muted);
+		font-size: 0.9rem;
+		font-weight: 600;
+		text-decoration: none;
+	}
+
+	.tabs a[aria-current='page'] {
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 </style>
