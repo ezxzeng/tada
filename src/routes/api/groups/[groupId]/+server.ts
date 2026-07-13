@@ -1,5 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { getGroupState, getGroupVersion } from '$lib/server/groups';
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { db } from '$lib/server/db';
+import { groups } from '$lib/server/db/schema';
+import { bumpAndGetState, getGroupState, getGroupVersion } from '$lib/server/groups';
+import { readJson } from '$lib/server/api';
 import type { RequestHandler } from './$types';
 
 const noStore = { 'cache-control': 'no-store' };
@@ -15,4 +20,18 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	}
 
 	return json(await getGroupState(params.groupId), { headers: noStore });
+};
+
+const renameGroupSchema = z.object({
+	name: z.string().trim().min(1).max(80)
+});
+
+export const PATCH: RequestHandler = async ({ params, request }) => {
+	const { groupId } = params;
+	const body = await readJson(request, renameGroupSchema);
+	await getGroupVersion(groupId); // throws 404 if the group doesn't exist
+
+	await db.update(groups).set({ name: body.name }).where(eq(groups.id, groupId));
+
+	return json(await bumpAndGetState(groupId));
 };
