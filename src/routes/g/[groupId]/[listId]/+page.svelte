@@ -2,9 +2,9 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { getGroupSync } from '$lib/client/context.svelte';
-	import { DragSort } from '$lib/client/dragsort.svelte';
 	import AddItemForm from '$lib/components/AddItemForm.svelte';
 	import ItemRow from '$lib/components/ItemRow.svelte';
+	import { DragSort } from '$lib/client/dragsort.svelte';
 
 	const sync = getGroupSync();
 
@@ -71,15 +71,19 @@
 
 	<ul class="items">
 		{#each todo as item (item.id)}
-			<ItemRow
-				{item}
-				onToggle={(i) => sync.toggleItem(i)}
-				onDelete={(i) => sync.deleteItem(i)}
-				onSave={(i, title, note) => sync.editItem(i, title, note)}
-				onPress={todo.length > 1 ? (event, i) => sort.press(event, i.id) : undefined}
-				dragging={sort.activeId === item.id}
-				offsetY={sort.offsetOf(item.id)}
-			/>
+			<li
+				data-item-id={item.id}
+				class:dragging={sort.activeId === item.id}
+				style="transform: translateY({sort.offsetOf(item.id)}px)"
+			>
+				<ItemRow
+					{item}
+					onToggle={(i) => sync.toggleItem(i)}
+					onDelete={(i) => sync.deleteItem(i)}
+					onSave={(i, title, note) => sync.editItem(i, title, note)}
+					onPress={todo.length > 1 ? (event, i) => sort.press(event, i.id) : undefined}
+				/>
+			</li>
 		{/each}
 	</ul>
 
@@ -99,12 +103,14 @@
 			</header>
 			<ul class="items">
 				{#each done as item (item.id)}
-					<ItemRow
-						{item}
-						onToggle={(i) => sync.toggleItem(i)}
-						onDelete={(i) => sync.deleteItem(i)}
-						onSave={(i, title, note) => sync.editItem(i, title, note)}
-					/>
+					<li data-item-id={item.id}>
+						<ItemRow
+							{item}
+							onToggle={(i) => sync.toggleItem(i)}
+							onDelete={(i) => sync.deleteItem(i)}
+							onSave={(i, title, note) => sync.editItem(i, title, note)}
+						/>
+					</li>
 				{/each}
 			</ul>
 		</section>
@@ -173,6 +179,20 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		margin-top: 1rem;
+	}
+
+	.items li {
+		transition: transform 0.15s ease;
+	}
+
+	/* The row under the finger: it tracks the pointer directly, so it must not lag
+	   behind through the transition the other rows use to slide out of its way. */
+	.items li.dragging {
+		transition: none;
+		position: relative;
+		z-index: 2;
+		box-shadow: 0 8px 20px rgb(0 0 0 / 0.18);
+		border-radius: 10px; /* matches .card */
 	}
 
 	.empty {

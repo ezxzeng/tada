@@ -1,8 +1,5 @@
-/** Long-press-then-drag reordering for a vertical list of rows. */
+/** Drag-handle reordering for a vertical list of rows. */
 
-const LONG_PRESS_MS = 320;
-/** Moving further than this before the long press fires means "scroll", not "drag". */
-const SLOP_PX = 8;
 /** Dragging within this distance of the top/bottom of the viewport scrolls the page. */
 const EDGE_PX = 72;
 /** Auto-scroll speed at the very edge of the viewport, in px per frame. */
@@ -24,9 +21,7 @@ export class DragSort {
 	#to = 0;
 	#startY = 0;
 	#pointerY = 0;
-	#pressTimer: ReturnType<typeof setTimeout> | null = null;
 	#scrollFrame: number | null = null;
-	#pending: { el: HTMLElement; id: string; x: number; y: number } | null = null;
 	#cleanup: (() => void) | null = null;
 
 	/** `commit` receives every row id in its new order. */
@@ -38,91 +33,89 @@ export class DragSort {
 		return this.offsets[id] ?? 0;
 	}
 
-	/** Attach to a row's onpointerdown. The row element needs `data-item-id`. */
+	/**
+	 * Attach to the drag handle's onpointerdown. The handle must sit inside an element
+	 * carrying `data-item-id`, and needs `touch-action: none` in CSS so the browser
+	 * never claims the gesture as a page scroll.
+	 */
 	press(event: PointerEvent, id: string): void {
 		if (event.button !== 0 && event.pointerType === 'mouse') return;
-		// Let the checkbox, the delete button and the edit inputs work normally.
-		const target = event.target as HTMLElement | null;
-		if (target?.closest('input, .icon')) return;
+		const el = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-item-id]');
+		if (!el) return;
 
-		const el = event.currentTarget as HTMLElement;
-		this.#pending = { el, id, x: event.clientX, y: event.clientY };
-		this.#pressTimer = setTimeout(() => this.#begin(), LONG_PRESS_MS);
-		this.#listen();
+		// The handle exists only to drag, so the drag starts on contact — no long press
+		// to wait out, and no text selection on the way.
+		event.preventDefault();
+		this.#begin(el, id, event.clientY);
+		if (this.activeId) this.#listen();
 	}
 
 	#listen(): void {
 		const onTouchMove = (e: TouchEvent) => {
 			const touch = e.touches[0];
 			if (!touch) return;
-			if (this.activeId) {
-				// Only this drag may scroll the page — needs a non-passive listener.
-				e.preventDefault();
-				this.#track(touch.clientY);
-			} else {
-				this.#maybeCancel(touch.clientX, touch.clientY);
-			}
+			// Only this drag may scroll the page — needs a non-passive listener.
+			if (e.cancelable) e.preventDefault();
+			this.#track(touch.clientY);
 		};
+		const onTouchEnd = () => this.#end(true);
+		const onTouchCancel = () => this.#end(false);
+		// Touch is driven by the listeners above. The browser also fires pointercancel
+		// the moment it claims the gesture for its own long-press (selection, callout),
+		// which would otherwise tear down a drag that is running perfectly well.
+		const isTouch = (e: PointerEvent) => e.pointerType === 'touch';
 		const onPointerMove = (e: PointerEvent) => {
-			if (e.pointerType === 'touch') return; // handled by the touch listener
-			if (this.activeId) this.#track(e.clientY);
-			else this.#maybeCancel(e.clientX, e.clientY);
+			if (!isTouch(e)) this.#track(e.clientY);
 		};
-		const onUp = () => this.#end(true);
-		const onCancel = () => this.#end(false);
-		// A page scroll before the long press fires means the user is scrolling, not
-		// dragging. Once dragging, the only scrolling is our own auto-scroll.
-		const onScroll = () => {
-			if (!this.activeId) this.#end(false);
+		const onUp = (e: PointerEvent) => {
+			if (!isTouch(e)) this.#end(true);
 		};
+		const onCancel = (e: PointerEvent) => {
+			if (!isTouch(e)) this.#end(false);
+		};
+		// The OS long-press menu lands in the middle of the drag. Swallow it.
+		const onContextMenu = (e: Event) => e.preventDefault();
 
 		window.addEventListener('touchmove', onTouchMove, { passive: false });
+		window.addEventListener('touchend', onTouchEnd);
+		window.addEventListener('touchcancel', onTouchCancel);
 		window.addEventListener('pointermove', onPointerMove);
 		window.addEventListener('pointerup', onUp);
 		window.addEventListener('pointercancel', onCancel);
-		window.addEventListener('contextmenu', onCancel);
-		window.addEventListener('scroll', onScroll);
+		window.addEventListener('contextmenu', onContextMenu);
 
 		this.#cleanup = () => {
 			window.removeEventListener('touchmove', onTouchMove);
+			window.removeEventListener('touchend', onTouchEnd);
+			window.removeEventListener('touchcancel', onTouchCancel);
 			window.removeEventListener('pointermove', onPointerMove);
 			window.removeEventListener('pointerup', onUp);
 			window.removeEventListener('pointercancel', onCancel);
-			window.removeEventListener('contextmenu', onCancel);
-			window.removeEventListener('scroll', onScroll);
+			window.removeEventListener('contextmenu', onContextMenu);
 			this.#cleanup = null;
 		};
 	}
 
-	/** Before the long press fires, any real movement means the user is scrolling. */
-	#maybeCancel(x: number, y: number): void {
-		const start = this.#pending;
-		if (!start) return;
-		if (Math.abs(x - start.x) > SLOP_PX || Math.abs(y - start.y) > SLOP_PX) this.#end(false);
-	}
-
-	#begin(): void {
-		const start = this.#pending;
-		if (!start) return;
-		const siblings = [...(start.el.parentElement?.children ?? [])] as HTMLElement[];
+	#begin(el: HTMLElement, id: string, clientY: number): void {
+		const siblings = [...(el.parentElement?.children ?? [])] as HTMLElement[];
 		const rows: Row[] = [];
-		for (const el of siblings) {
-			const id = el.dataset.itemId;
-			if (!id) continue;
-			const rect = el.getBoundingClientRect();
-			rows.push({ id, top: rect.top + window.scrollY, height: rect.height });
+		for (const sibling of siblings) {
+			const rowId = sibling.dataset.itemId;
+			if (!rowId) continue;
+			const rect = sibling.getBoundingClientRect();
+			rows.push({ id: rowId, top: rect.top + window.scrollY, height: rect.height });
 		}
-		const from = rows.findIndex((r) => r.id === start.id);
-		if (from === -1 || rows.length < 2) return this.#end(false);
+		const from = rows.findIndex((r) => r.id === id);
+		if (from === -1 || rows.length < 2) return;
 
 		this.#rows = rows;
 		this.#gap = rows[1].top - (rows[0].top + rows[0].height);
 		this.#from = from;
 		this.#to = from;
-		this.#pointerY = start.y;
-		this.#startY = start.y + window.scrollY;
-		this.activeId = start.id;
-		this.offsets = { [start.id]: 0 };
+		this.#pointerY = clientY;
+		this.#startY = clientY + window.scrollY;
+		this.activeId = id;
+		this.offsets = { [id]: 0 };
 		navigator.vibrate?.(12);
 		this.#scrollFrame = requestAnimationFrame(() => this.#autoScroll());
 	}
@@ -193,34 +186,19 @@ export class DragSort {
 	}
 
 	#end(commit: boolean): void {
-		if (this.#pressTimer) clearTimeout(this.#pressTimer);
 		if (this.#scrollFrame !== null) cancelAnimationFrame(this.#scrollFrame);
-		this.#pressTimer = null;
 		this.#scrollFrame = null;
-		this.#pending = null;
 		this.#cleanup?.();
 
-		const dragging = this.activeId !== null;
-		if (dragging && commit && this.#to !== this.#from) {
+		if (this.activeId !== null && commit && this.#to !== this.#from) {
 			const ids = this.#rows.map((r) => r.id);
 			const [moved] = ids.splice(this.#from, 1);
 			ids.splice(this.#to, 0, moved);
 			this.#commit(ids);
 		}
-		if (dragging) this.#suppressNextClick();
 
 		this.activeId = null;
 		this.offsets = {};
 		this.#rows = [];
-	}
-
-	/** A drag that ends over the row's text must not open the editor. */
-	#suppressNextClick(): void {
-		const swallow = (e: MouseEvent) => {
-			e.stopPropagation();
-			e.preventDefault();
-		};
-		window.addEventListener('click', swallow, { capture: true, once: true });
-		setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 300);
 	}
 }
