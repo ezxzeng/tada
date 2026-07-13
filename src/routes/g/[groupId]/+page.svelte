@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { getGroupSync } from '$lib/client/context.svelte';
 	import type { TodoList } from '$lib/types';
 
@@ -16,9 +17,10 @@
 		const name = newListName.trim();
 		if (!name || addingList) return;
 		addingList = true;
-		await sync.addList(name);
+		const listId = await sync.addList(name);
 		addingList = false;
 		newListName = '';
+		if (listId) await goto(`/g/${sync.groupId}/${listId}`);
 	}
 </script>
 

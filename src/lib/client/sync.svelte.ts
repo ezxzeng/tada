@@ -122,8 +122,10 @@ export class GroupSync {
 
 	// ---- Lists ----
 
-	async addList(name: string): Promise<void> {
-		await this.#mutate('POST', this.#api('/lists'), { name });
+	async addList(name: string): Promise<string | null> {
+		const before = new Set(this.state.lists.map((l) => l.id));
+		const data = await this.#mutate('POST', this.#api('/lists'), { name });
+		return data?.lists.find((l) => !before.has(l.id))?.id ?? null;
 	}
 
 	async renameList(listId: string, name: string): Promise<void> {
