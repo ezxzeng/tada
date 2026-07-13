@@ -33,10 +33,8 @@
 
 <header>
 	<a class="home" href="/" aria-label="tada — home">
-		<picture>
-			<source srcset={tadaDark} media="(prefers-color-scheme: dark)" />
-			<img src={tadaLight} alt="" width="164" height="50" />
-		</picture>
+		<img class="light-only" src={tadaLight} alt="" width="164" height="50" />
+		<img class="dark-only" src={tadaDark} alt="" width="164" height="50" />
 	</a>
 	<div class="title-row">
 		<h1><a href="/g/{sync.groupId}">{sync.state.group.name}</a></h1>
@@ -69,10 +67,11 @@
 		display: inline-block;
 	}
 
+	/* No `display` here: the global .light-only/.dark-only rules own that. */
 	.home img {
-		display: block;
 		width: 5rem;
 		height: auto;
+		vertical-align: bottom;
 	}
 
 	.home:hover img {

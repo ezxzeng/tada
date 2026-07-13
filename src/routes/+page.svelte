@@ -57,10 +57,8 @@
 
 <header class="hero">
 	<h1>
-		<picture>
-			<source srcset={tadaDark} media="(prefers-color-scheme: dark)" />
-			<img src={tadaLight} alt="tada" width="120" height="143" />
-		</picture>
+		<img class="light-only" src={tadaLight} alt="tada" width="120" height="143" />
+		<img class="dark-only" src={tadaDark} alt="tada" width="120" height="143" />
 	</h1>
 	<p class="muted">
 		Shared lists without accounts. Create a group, send the link to your roommates, done.
