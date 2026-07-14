@@ -42,12 +42,12 @@ export class DragSort {
 
 	/**
 	 * Attach to the drag handle's onpointerdown. The handle must sit inside an element
-	 * carrying `data-item-id`, and needs `touch-action: none` in CSS so the browser
+	 * carrying `data-drag-id`, and needs `touch-action: none` in CSS so the browser
 	 * never claims the gesture as a page scroll.
 	 */
 	press(event: PointerEvent, id: string): void {
 		if (event.button !== 0 && event.pointerType === 'mouse') return;
-		const el = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-item-id]');
+		const el = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-drag-id]');
 		if (!el) return;
 
 		// The handle exists only to drag, so the drag starts on contact — no long press
@@ -107,7 +107,7 @@ export class DragSort {
 		const siblings = [...(el.parentElement?.children ?? [])] as HTMLElement[];
 		const rows: Row[] = [];
 		for (const sibling of siblings) {
-			const rowId = sibling.dataset.itemId;
+			const rowId = sibling.dataset.dragId;
 			if (!rowId) continue;
 			const rect = sibling.getBoundingClientRect();
 			rows.push({ id: rowId, top: rect.top + window.scrollY, height: rect.height });

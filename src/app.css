@@ -140,3 +140,23 @@ button {
 .muted {
 	color: var(--muted);
 }
+
+/* Shared landing and displacement behavior for every vertical DragSort surface. */
+.drag-sort > .drag-sort-row {
+	transition: transform 0.15s ease;
+}
+
+/* The rows have already moved to their new slots on this frame, so animating the
+   cleared offsets would make them travel away from the final position and back. */
+.drag-sort.settling > .drag-sort-row {
+	transition: none;
+}
+
+/* The active row follows the pointer directly while the others slide aside. */
+.drag-sort > .drag-sort-row.dragging {
+	transition: none;
+	position: relative;
+	z-index: 2;
+	box-shadow: 0 8px 20px rgb(0 0 0 / 0.18);
+	border-radius: var(--radius);
+}

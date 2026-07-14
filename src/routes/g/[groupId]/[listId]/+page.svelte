@@ -72,10 +72,11 @@
 		<AddItemForm onAdd={(title, note) => sync.addItem(activeList.id, title, note)} />
 	</div>
 
-	<ul class="items" class:settling={sort.settling}>
+	<ul class="items drag-sort" class:settling={sort.settling}>
 		{#each todo as item (item.id)}
 			<li
-				data-item-id={item.id}
+				class="drag-sort-row"
+				data-drag-id={item.id}
 				class:dragging={sort.activeId === item.id}
 				style="transform: translateY({sort.offsetOf(item.id)}px)"
 			>
@@ -106,7 +107,7 @@
 			</header>
 			<ul class="items">
 				{#each done as item (item.id)}
-					<li data-item-id={item.id}>
+					<li>
 						<ItemRow
 							{item}
 							onToggle={(i) => sync.toggleItem(i)}
@@ -186,26 +187,6 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		margin-top: 1rem;
-	}
-
-	.items li {
-		transition: transform 0.15s ease;
-	}
-
-	/* The frame the reordered list lands in: the rows are already where the drag left them,
-	   so any transition here is movement away from the right answer and back. */
-	.items.settling li {
-		transition: none;
-	}
-
-	/* The row under the finger: it tracks the pointer directly, so it must not lag
-	   behind through the transition the other rows use to slide out of its way. */
-	.items li.dragging {
-		transition: none;
-		position: relative;
-		z-index: 2;
-		box-shadow: 0 8px 20px rgb(0 0 0 / 0.18);
-		border-radius: 10px; /* matches .card */
 	}
 
 	.empty {

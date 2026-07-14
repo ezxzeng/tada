@@ -154,6 +154,21 @@ export class GroupSync {
 		await this.#mutate('DELETE', this.#api(`/lists/${listId}`));
 	}
 
+	async reorderLists(orderedIds: string[]): Promise<void> {
+		const moving = new Set(orderedIds);
+		const byId = new Map(this.state.lists.map((list) => [list.id, list]));
+		const ordered = [
+			...orderedIds.map((id) => byId.get(id)).filter((list) => list !== undefined),
+			...this.state.lists.filter((list) => !moving.has(list.id))
+		];
+		ordered.forEach((list, index) => (list.position = index));
+		this.state.lists = ordered;
+
+		await this.#mutate('PATCH', this.#api('/lists'), {
+			ids: ordered.map((list) => list.id)
+		});
+	}
+
 	// ---- Items ----
 
 	async addItem(listId: string, title: string, note: string): Promise<void> {

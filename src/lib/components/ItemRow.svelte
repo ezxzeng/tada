@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DragHandle from './DragHandle.svelte';
 	import type { Item } from '$lib/types';
 
 	let {
@@ -134,20 +135,11 @@
 
 	<!-- The editor takes the handle's width back: reordering isn't reachable mid-edit anyway. -->
 	{#if !editing}
-		{#if onPress}
-			<span
-				class="handle"
-				role="button"
-				tabindex="-1"
-				aria-label="Reorder {item.title}"
-				onpointerdown={(event) => onPress?.(event, item)}
-			>
-				⠿
-			</span>
-		{:else}
-			<!-- Keeps the text in line with the reorderable rows above. -->
-			<span class="handle" aria-hidden="true"></span>
-		{/if}
+		<!-- The empty handle keeps completed text aligned with reorderable rows. -->
+		<DragHandle
+			label="Reorder {item.title}"
+			onPress={onPress ? (event) => onPress(event, item) : undefined}
+		/>
 	{/if}
 </div>
 
@@ -158,29 +150,6 @@
 		gap: 0.7rem;
 		padding: 0.3rem 0.6rem 0.3rem 0.8rem;
 		min-height: 3rem;
-	}
-
-	/* The only draggable part of the row. `touch-action: none` keeps the browser from
-	   claiming the gesture as a page scroll, so the drag starts on the first move. */
-	.handle {
-		flex-shrink: 0;
-		/* A finger-sized target: the grip glyph itself is only a few px wide. */
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 2.75rem;
-		min-height: 2.75rem;
-		color: var(--muted);
-		font-size: 1.1rem;
-		line-height: 1;
-		touch-action: none;
-		-webkit-user-select: none;
-		user-select: none;
-		-webkit-touch-callout: none;
-	}
-
-	.handle:hover {
-		color: var(--text);
 	}
 
 	input[type='checkbox'] {
