@@ -11,7 +11,7 @@ create a **group**, share its link, and anyone with the link can add, check off,
 The unguessable URL is the only credential.
 
 - **Groups** hold multiple lists (Groceries, Chores, Costco run…) behind one share link
-- **No signup** — on first visit you pick or enter your name (stored in localStorage) so items show who added/checked them
+- **No signup** — link is the only credential by design. Don't put anything sensitive up
 - **Live-ish sync** — open tabs poll a version counter every 3s and pick up everyone's changes
 - SvelteKit (Svelte 5) · Drizzle ORM · Neon serverless Postgres · deploys to Vercel
 
