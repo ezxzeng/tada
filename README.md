@@ -22,8 +22,7 @@ The unguessable URL is the only credential.
 
    ```sh
    cp .env.example .env
-   # DATABASE_URL      — the database you develop against
-   # DATABASE_URL_PROD — the production database (local only; never set in Vercel)
+   # DATABASE_URL — the database you develop against
    ```
 
 3. Create the tables and run the dev server:
@@ -38,20 +37,24 @@ The unguessable URL is the only credential.
 
 The app reads `DATABASE_URL` at runtime. With the [Neon–Vercel integration](https://neon.com/docs/guides/neon-managed-vercel-integration)
 that variable is injected into the Vercel project automatically (and preview deployments get their own
-Neon branch), so there is nothing to configure by hand.
+Neon branch), so there is nothing to configure by hand. The `vercel-build` script applies committed
+migrations to that environment before building the application; a failed migration stops the deploy.
 
-The integration does **not** apply schema changes — nothing in the Vercel build runs `drizzle-kit`.
-Whenever you change `src/lib/server/db/schema.ts`, push the schema to production yourself, before
-deploying the code that depends on it:
+Whenever you change `src/lib/server/db/schema.ts`, generate and review a migration in the same change:
 
 ```sh
-npm run db:push:prod   # uses DATABASE_URL_PROD from your local .env
-git push               # Vercel builds and deploys
+npm run db:generate
+git add drizzle src/lib/server/db/schema.ts
+git commit
+git push
 ```
 
-Pushing the schema first keeps the two in sync: additive changes (new tables/columns) are safe against
-the running old code, whereas destructive ones (dropping or renaming a column) will break it, so ship
-those as an additive push, then the code, then a cleanup push.
+`npm run db:push` remains available for disposable development databases only. Production schema
+changes come from the SQL and migration metadata committed under `drizzle/`; production credentials
+do not need to live on a developer laptop.
+
+Use expand-and-contract migrations for destructive changes: deploy an additive migration first, then
+the code that stops using the old table or column, and only then deploy a cleanup migration.
 
 ## How it works
 
