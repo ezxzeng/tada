@@ -1,8 +1,5 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
-	import { forgetGroup, rememberGroup } from '$lib/client/recents';
-	import type { GroupState } from '$lib/types';
 
 	let { path }: { path: string } = $props();
 
@@ -10,8 +7,6 @@
 	let urlInput: HTMLInputElement;
 	let url = $state('');
 	let copied = $state(false);
-	let regenerating = $state(false);
-	let regenerateFailed = $state(false);
 	let timer: ReturnType<typeof setTimeout>;
 
 	const canShare = browser && !!navigator.share;
@@ -41,31 +36,6 @@
 			await navigator.share({ url });
 		} catch {
 			// user dismissed the share sheet
-		}
-	}
-
-	async function regenerate() {
-		if (regenerating) return;
-		const confirmed = confirm(
-			'Generate a new link? The current share link will stop working immediately. Scoped integrations will keep working.'
-		);
-		if (!confirmed) return;
-
-		regenerating = true;
-		regenerateFailed = false;
-		try {
-			const groupId = path.split('/').at(-1);
-			if (!groupId) throw new Error('missing group ID');
-			const res = await fetch(`/api/groups/${groupId}/regenerate-link`, { method: 'POST' });
-			if (!res.ok) throw new Error(`regenerate failed: ${res.status}`);
-			const state = (await res.json()) as GroupState;
-			forgetGroup(groupId);
-			rememberGroup(state.group.id, state.group.name);
-			dialog.close();
-			await goto(`/g/${state.group.id}`);
-		} catch {
-			regenerateFailed = true;
-			regenerating = false;
 		}
 	}
 
@@ -174,18 +144,6 @@
 			{/if}
 		</div>
 
-		<div class="regenerate">
-			<div>
-				<strong>Need to revoke this link?</strong>
-				<p>Generate a new one. The old link will return not found, but your lists stay.</p>
-			</div>
-			<button class="btn-quiet" onclick={regenerate} disabled={regenerating}>
-				{regenerating ? 'Generating…' : 'Generate new link'}
-			</button>
-		</div>
-		{#if regenerateFailed}
-			<p class="error">Couldn’t generate a new link. Please try again.</p>
-		{/if}
 	</div>
 </dialog>
 
@@ -259,30 +217,4 @@
 		min-width: 0;
 	}
 
-	.regenerate {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid var(--border);
-	}
-
-	.regenerate strong {
-		font-size: 0.9rem;
-	}
-
-	.regenerate p,
-	.error {
-		margin-top: 0.2rem;
-		font-size: 0.8rem;
-	}
-
-	.regenerate p {
-		color: var(--muted);
-	}
-
-	.error {
-		color: var(--danger);
-	}
 </style>

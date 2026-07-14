@@ -35,6 +35,10 @@
 	</div>
 
 	{@render children()}
+
+	<footer>
+		<a href="https://github.com/ezxzeng/tada" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+	</footer>
 </main>
 
 <style>
@@ -76,5 +80,16 @@
 
 	.home:hover img {
 		opacity: 0.75;
+	}
+
+	footer {
+		margin-top: 2rem;
+		text-align: center;
+		font-size: 0.85rem;
+		color: var(--muted);
+	}
+
+	footer a:hover {
+		color: var(--accent);
 	}
 </style>

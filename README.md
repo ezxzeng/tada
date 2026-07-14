@@ -57,7 +57,7 @@ those as an additive push, then the code, then a cleanup push.
 
 - A group id is a 16-char nanoid (~95 bits of entropy); every API route is scoped under
   `/api/groups/[groupId]/…` and the server verifies each list/item actually belongs to that group.
-  In the share dialog, **Generate new link** rotates that ID without changing the group’s data.
+  In group Settings, **Generate new link** rotates that ID without changing the group’s data.
   The previous share URL then returns 404. Scoped integrations keep working because they use
   independent credentials.
 - Every mutation bumps `groups.version`. Clients poll `GET /api/groups/[groupId]?since=<version>`

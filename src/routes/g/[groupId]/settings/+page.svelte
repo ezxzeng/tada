@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { getGroupSync } from '$lib/client/context.svelte';
+	import { forgetGroup, rememberGroup } from '$lib/client/recents';
 	import {
 		WEBHOOK_ACTIONS,
 		type CreatedWebhookIntegration,
+		type GroupState,
 		type WebhookAction,
 		type WebhookIntegration
 	} from '$lib/types';
@@ -23,6 +26,8 @@
 	let revoking = $state<string | null>(null);
 	let created = $state<CreatedWebhookIntegration | null>(null);
 	let copied = $state('');
+	let regeneratingLink = $state(false);
+	let regenerateLinkError = $state('');
 
 	const actionLabels: Record<WebhookAction, string> = {
 		add: 'Add items',
@@ -77,6 +82,28 @@
 			revokeError = 'Couldn’t revoke the integration. Please try again.';
 		} finally {
 			revoking = null;
+		}
+	}
+
+	async function regenerateLink() {
+		if (regeneratingLink) return;
+		const confirmed = confirm(
+			'Generate a new link? The current share link will stop working immediately. Scoped integrations will keep working.'
+		);
+		if (!confirmed) return;
+
+		regeneratingLink = true;
+		regenerateLinkError = '';
+		try {
+			const response = await fetch(`/api/groups/${sync.groupId}/regenerate-link`, { method: 'POST' });
+			if (!response.ok) throw new Error(`regenerate failed: ${response.status}`);
+			const state = (await response.json()) as GroupState;
+			forgetGroup(sync.groupId);
+			rememberGroup(state.group.id, state.group.name);
+			await goto(`/g/${state.group.id}/settings`);
+		} catch {
+			regenerateLinkError = 'Couldn’t generate a new link. Please try again.';
+			regeneratingLink = false;
 		}
 	}
 
@@ -274,6 +301,20 @@ rest_command:
 	{/if}
 </section>
 
+<section class="card link-security">
+	<div>
+		<h3>Share link</h3>
+		<p class="muted">
+			Generate a new link to revoke access from anyone using the current one. Your lists and
+			integrations will keep working.
+		</p>
+	</div>
+	<button class="btn-quiet" onclick={regenerateLink} disabled={regeneratingLink}>
+		{regeneratingLink ? 'Generating…' : 'Generate new link'}
+	</button>
+	{#if regenerateLinkError}<p class="error">{regenerateLinkError}</p>{/if}
+</section>
+
 <style>
 	.intro {
 		margin-bottom: 1rem;
@@ -289,6 +330,27 @@ rest_command:
 
 	.card {
 		padding: 1rem;
+	}
+
+	.link-security {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.link-security h3 {
+		font-size: 1rem;
+	}
+
+	.link-security p {
+		margin-top: 0.25rem;
+		font-size: 0.85rem;
+	}
+
+	.link-security .error {
+		grid-column: 1 / -1;
 	}
 
 	.created {
@@ -478,6 +540,15 @@ rest_command:
 	}
 
 	@media (max-width: 32rem) {
+		.link-security {
+			grid-template-columns: 1fr;
+			align-items: start;
+		}
+
+		.link-security .btn-quiet {
+			width: 100%;
+		}
+
 		.setup-head,
 		.form-footer,
 		.integration {
