@@ -3,7 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import tadaDark from '$lib/assets/tada-horizontal-dark.svg';
 	import tadaLight from '$lib/assets/tada-horizontal-light.svg';
-	import { page } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import ShareButton from '$lib/components/ShareButton.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 
@@ -17,6 +17,10 @@
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>
+
+{#if navigating.to}
+	<div class="nav-progress" role="progressbar" aria-label="Loading"></div>
+{/if}
 
 <main class="shell">
 	<div class="topbar">
@@ -42,6 +46,49 @@
 </main>
 
 <style>
+	/* A navigation can wait seconds on a cold function and database; without this a
+	   click shows nothing until it lands. The delay keeps fast navigations from flashing it. */
+	.nav-progress {
+		position: fixed;
+		inset: 0 0 auto;
+		z-index: 10;
+		height: 3px;
+		overflow: hidden;
+		opacity: 0;
+		animation: nav-progress-show 0s 150ms forwards;
+	}
+
+	.nav-progress::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		width: 40%;
+		background: var(--accent);
+		animation: nav-progress-slide 1s ease-in-out infinite;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.nav-progress::before {
+			width: 100%;
+			animation: none;
+		}
+	}
+
+	@keyframes nav-progress-show {
+		to {
+			opacity: 1;
+		}
+	}
+
+	@keyframes nav-progress-slide {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(250%);
+		}
+	}
+
 	.shell {
 		max-width: 40rem;
 		margin: 0 auto;

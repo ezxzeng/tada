@@ -20,10 +20,12 @@ const WEBHOOKS: RateLimitRule = { name: 'webhook', limit: 120, windowMs: 60_000 
 const API_READS: RateLimitRule = { name: 'api-read', limit: 300, windowMs: 60_000 };
 const API_MUTATIONS: RateLimitRule = { name: 'api-mutation', limit: 120, windowMs: 60_000 };
 const GROUP_PAGES: RateLimitRule = { name: 'group-page', limit: 120, windowMs: 60_000 };
+const HEALTH: RateLimitRule = { name: 'health', limit: 30, windowMs: 60_000 };
 
 function ruleFor(method: string, pathname: string): RateLimitRule | null {
 	if (method === 'POST' && pathname === '/api/groups') return GROUP_CREATION;
 	if (pathname.startsWith('/api/hooks/')) return WEBHOOKS;
+	if (pathname === '/api/health') return HEALTH;
 	if (pathname.startsWith('/api/groups/')) {
 		return method === 'GET' || method === 'HEAD' ? API_READS : API_MUTATIONS;
 	}

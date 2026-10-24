@@ -63,6 +63,10 @@ those as an additive push, then the code, then a cleanup push.
 - Every mutation bumps `groups.version`. Clients poll `GET /api/groups/[groupId]?since=<version>`
   (only while the tab is visible) and get a tiny "unchanged" reply or the full group state.
   Mutations respond with fresh state too, and the UI applies changes optimistically.
+- `GET /api/health` returns `{"status":"ok"}`, or 503 when the database is unreachable. The home
+  page calls it on load so a cold Vercel function and a suspended Neon compute wake up before
+  the first group is opened. On Neon's free plan, don't point a frequent uptime monitor at it:
+  that keeps the database awake around the clock and uses up the plan's compute hours.
 - Anyone with the link can access the group and its lists — that's the intended trust model.
 
 Don't keep secrets in a list, and don't post group links publicly.

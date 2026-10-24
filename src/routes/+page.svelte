@@ -20,6 +20,13 @@
 		recents = getRecentGroups();
 	});
 
+	// Opening or creating a group can wait seconds on a cold serverless function and a
+	// suspended Neon compute, so wake both while the page is being read. Best effort:
+	// if it fails, the first click just waits as it would have anyway.
+	$effect(() => {
+		void fetch('/api/health').catch(() => {});
+	});
+
 	async function create(event: SubmitEvent) {
 		event.preventDefault();
 		if (busy) return;
